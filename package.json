@@ -1,0 +1,21 @@
+{
+    "name": "simple-pg-backup",
+    "version": "1.0.0",
+    "description": "Tiny Express UI to create Postgres backups using pg_dump",
+    "main": "src/server.js",
+    "type": "module",
+    "scripts": {
+        "start": "node src/server.js",
+        "dev": "NODE_ENV=development node src/server.js"
+    },
+    "dependencies": {
+        "basic-auth": "^2.0.1",
+        "compression": "^1.7.4",
+        "ejs": "^3.1.10",
+        "express": "^4.19.2",
+        "express-rate-limit": "^7.4.0",
+        "helmet": "^7.1.0",
+        "morgan": "^1.10.0",
+        "multer": "^1.4.5-lts.1"
+    }
+}

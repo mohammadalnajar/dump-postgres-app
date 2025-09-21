@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body>
+    <main class="container">
+        <h1><%= title %></h1>
+
+        <form method="POST" action="/backup">
+            <fieldset>
+                <legend>Connection</legend>
+                <div class="grid">
+                    <label>Host <input name="host" required placeholder="db.example.com" /></label>
+                    <label>Port <input name="port" type="number" min="1" max="65535" value="5432" /></label>
+                    <label>Database <input name="db" required placeholder="mydb" /></label>
+                    <label>User <input name="user" required placeholder="dbuser" /></label>
+                    <label>Password <input name="password" type="password" required placeholder="••••••••" /></label>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend>Options</legend>
+                <div class="grid">
+                    <label>Format
+                        <select name="format">
+                            <option value="plain" <%= defaults.format==='plain'?'selected':'' %>>Plain (.sql)</option>
+                            <option value="custom" <%= defaults.format==='custom'?'selected':'' %>>Custom (.dump)
+                            </option>
+                            <option value="tar" <%= defaults.format==='tar'?'selected':'' %>>Tar (.tar)</option>
+                        </select>
+                    </label>
+
+                    <label>Include owner?
+                        <select name="includeOwner">
+                            <option value="">Default</option>
+                            <option value="true" <%= defaults.includeOwner===true?'selected':'' %>>Yes</option>
+                            <option value="false" <%= defaults.includeOwner===false?'selected':'' %>>No</option>
+                        </select>
+                    </label>
+
+                    <label>Only schema (name)
+                        <input name="onlySchema" placeholder="public or schema_name"
+                            value="<%= defaults.onlySchema||'' %>" />
+                    </label>
+
+                    <label>Data only?
+                        <select name="onlyData">
+                            <option value="">No</option>
+                            <option value="true" <%= defaults.onlyData===true?'selected':'' %>>Yes</option>
+                        </select>
+                    </label>
+
+                    <label>Exclude schema
+                        <input name="excludeSchema" placeholder="information_schema"
+                            value="<%= defaults.excludeSchema||'' %>" />
+                    </label>
+
+                    <label>Compression level (0-9)
+                        <input name="compressLevel" type="number" min="0" max="9"
+                            value="<%= defaults.compressLevel ?? 0 %>" />
+                    </label>
+
+                    <label>Extra args
+                        <input name="extraArgs" placeholder="--no-privileges --column-inserts"
+                            value="<%= defaults.extraArgs||'' %>" />
+                    </label>
+                </div>
+            </fieldset>
+
+            <button type="submit">Create Backup</button>
+        </form>
+
+        <% if (message) { %>
+        <div class="message"><%= message %></div>
+        <% } %>
+
+        <section>
+            <h2>Backups</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>File</th>
+                        <th>Size</th>
+                        <th>Modified</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% files.forEach(f => { %>
+                    <tr>
+                        <td><%= f.name %></td>
+                        <td><%= (f.size/1024/1024).toFixed(2) %> MB</td>
+                        <td><%= f.mtime.toLocaleString() %></td>
+                        <td class="actions">
+                            <a href="/download/<%= encodeURIComponent(f.name) %>">Download</a>
+                            <form method="POST" action="/delete/<%= encodeURIComponent(f.name) %>"
+                                style="display:inline" onsubmit="return confirm('Delete this file?')">
+                                <button type="submit">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </section>
+    </main>
+</body>
+
+</html>
