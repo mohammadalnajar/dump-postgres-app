@@ -311,33 +311,30 @@ function escapePostgreSQLValue(val) {
     // and convert them to proper SQL string literals
     let escaped = val;
 
-    // Handle PostgreSQL COPY format escape sequences
-    // First, handle escaped tabs, newlines, etc.
-    escaped = escaped.replace(/\\t/g, '\t');
-    escaped = escaped.replace(/\\n/g, '\n');
-    escaped = escaped.replace(/\\r/g, '\r');
+    // Check if this is likely a JSON string before processing escape sequences
+    const isJson = isLikelyJsonString(escaped);
 
-    // Handle escaped backslashes - PostgreSQL COPY format uses \\ for literal \
-    // We need to convert this to a single backslash first
-    escaped = escaped.replace(/\\\\/g, '\x00TEMP_BACKSLASH\x00'); // Temporary placeholder
-
-    // Handle other escapes
-    escaped = escaped.replace(/\\(.)/g, '$1'); // Remove escape character for other chars
-
-    // Restore the actual backslashes
-    escaped = escaped.replace(/\x00TEMP_BACKSLASH\x00/g, '\\');
-
-    // Now escape for SQL string literal
-    // Double single quotes for SQL
-    escaped = escaped.replace(/'/g, "''");
-
-    // For JSON content, we need to escape backslashes properly for SQL
-    // JSON strings need backslashes to be doubled in SQL string literals
-    if (isLikelyJsonString(escaped)) {
-        // Additional escaping for JSON in SQL string literals
-        escaped = escaped.replace(/\\/g, '\\\\');
+    if (isJson) {
+        // For JSON strings, we need special handling to preserve JSON validity
+        escaped = escapeJsonForPostgreSQL(escaped);
     } else {
-        // For non-JSON strings, still need to escape backslashes for SQL
+        // For non-JSON strings, handle normal escape sequences
+        // Handle PostgreSQL COPY format escape sequences
+        escaped = escaped.replace(/\\t/g, '\t');
+        escaped = escaped.replace(/\\n/g, '\n');
+        escaped = escaped.replace(/\\r/g, '\r');
+
+        // Handle escaped backslashes - PostgreSQL COPY format uses \\ for literal \
+        escaped = escaped.replace(/\\\\/g, '\x00TEMP_BACKSLASH\x00'); // Temporary placeholder
+
+        // Handle other escapes
+        escaped = escaped.replace(/\\(.)/g, '$1'); // Remove escape character for other chars
+
+        // Restore the actual backslashes
+        escaped = escaped.replace(/\x00TEMP_BACKSLASH\x00/g, '\\');
+
+        // Escape for SQL string literal
+        escaped = escaped.replace(/'/g, "''");
         escaped = escaped.replace(/\\/g, '\\\\');
     }
 
@@ -345,11 +342,80 @@ function escapePostgreSQLValue(val) {
 }
 
 /**
+ * Special escaping function for JSON strings to ensure PostgreSQL compatibility
+ */
+function escapeJsonForPostgreSQL(jsonStr) {
+    let escaped = jsonStr;
+
+    try {
+        // Handle PostgreSQL COPY format escape sequences while preserving JSON structure
+        // First, handle escaped backslashes
+        escaped = escaped.replace(/\\\\/g, '\x00TEMP_BACKSLASH\x00');
+
+        // Handle escaped quotes within JSON strings
+        escaped = escaped.replace(/\\"/g, '\x00TEMP_QUOTE\x00');
+
+        // Handle escaped tabs, but preserve them as escaped for JSON
+        escaped = escaped.replace(/\\t/g, '\x00TEMP_TAB\x00');
+
+        // Handle escaped carriage returns, but preserve them as escaped for JSON
+        escaped = escaped.replace(/\\r/g, '\x00TEMP_CR\x00');
+
+        // Critical: Handle escaped newlines properly for JSON
+        // In COPY format, \\n represents a literal \n in the JSON
+        // We need to preserve this as \\n for valid JSON
+        escaped = escaped.replace(/\\n/g, '\x00TEMP_NEWLINE\x00');
+
+        // Handle other single-character escapes
+        escaped = escaped.replace(/\\(.)/g, '$1');
+
+        // Restore the preserved sequences with proper JSON escaping
+        escaped = escaped.replace(/\x00TEMP_BACKSLASH\x00/g, '\\\\');
+        escaped = escaped.replace(/\x00TEMP_QUOTE\x00/g, '\\"');
+        escaped = escaped.replace(/\x00TEMP_TAB\x00/g, '\\t');
+        escaped = escaped.replace(/\x00TEMP_CR\x00/g, '\\r');
+        escaped = escaped.replace(/\x00TEMP_NEWLINE\x00/g, '\\n');
+
+        // Now escape single quotes for SQL string literal
+        escaped = escaped.replace(/'/g, "''");
+
+        // Double backslashes for SQL string literal containing JSON
+        escaped = escaped.replace(/\\/g, '\\\\');
+
+        // Validate that the resulting JSON is well-formed (if it looks like complete JSON)
+        if (escaped.trim().startsWith('{') && escaped.trim().endsWith('}')) {
+            try {
+                // Create a test version to validate JSON structure
+                const testJson = escaped.replace(/''/g, "'").replace(/\\\\/g, '\\');
+                JSON.parse(testJson);
+            } catch (parseError) {
+                console.warn('Warning: Generated JSON may not be valid:', parseError.message);
+                console.warn('Original:', jsonStr);
+                console.warn('Escaped:', escaped);
+            }
+        }
+
+        return escaped;
+    } catch (error) {
+        console.warn('Error in escapeJsonForPostgreSQL:', error.message);
+        console.warn('Input:', jsonStr);
+        // Fallback to basic escaping
+        return jsonStr.replace(/'/g, "''").replace(/\\/g, '\\\\');
+    }
+}
+
+/**
  * Detect if a string is likely a JSON string
  */
 function isLikelyJsonString(str) {
+    if (!str || typeof str !== 'string') return false;
+
     const trimmed = str.trim();
-    // Check for JSON object, array, or string patterns
+
+    // Empty string is not JSON
+    if (!trimmed) return false;
+
+    // Check for JSON object, array patterns
     if (
         (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
         (trimmed.startsWith('[') && trimmed.endsWith(']'))
@@ -357,9 +423,16 @@ function isLikelyJsonString(str) {
         return true;
     }
 
-    // Also check for complex objects that might have JSON-like content
-    // Look for typical JSON patterns like "key": "value"
+    // Check for strings that contain JSON-like patterns
+    // This covers partially escaped JSON or malformed JSON that still needs careful handling
     if (trimmed.includes('"') && trimmed.includes(':')) {
+        // Look for key-value patterns typical of JSON objects
+        const hasJsonPattern = /"\s*:\s*/.test(trimmed);
+        return hasJsonPattern;
+    }
+
+    // Check for simple JSON string values (quoted strings)
+    if (trimmed.startsWith('"') && trimmed.endsWith('"') && trimmed.includes('\\')) {
         return true;
     }
 
@@ -371,11 +444,16 @@ function convertCopyToInserts(content) {
     let formatted = content;
 
     // Pattern to match COPY statements and their data
+    // Updated to handle quoted table names and be more flexible with the ending
     formatted = formatted.replace(
-        /COPY ([\w.]+) \(([^)]+)\) FROM stdin;\n((?:.*\n)*?)\\\.\n/g,
+        /COPY ((?:"[^"]+"|[\w.]+)) \(([^)]+)\) FROM stdin;\n((?:.*\n)*?)\\\.\n?/g,
         (match, tableName, columns, data) => {
-            const cleanTableName = tableName.replace('public.', '');
+            // Clean table name - remove quotes and schema prefix
+            const cleanTableName = tableName.replace(/"/g, '').replace('public.', '');
+
+            // Parse column names - handle quoted column names
             const columnNames = columns.split(',').map((col) => col.trim().replace(/"/g, ''));
+
             const dataLines = data
                 .trim()
                 .split('\n')
@@ -390,21 +468,47 @@ COMMIT;\n\n`;
             }
 
             const insertStatements = dataLines
-                .map((line) => {
-                    // Split by tabs, but we need to be careful about the number of expected columns
-                    const rawValues = parseTabSeparatedLine(line, columnNames.length);
+                .map((line, lineIndex) => {
+                    try {
+                        // Split by tabs, but we need to be careful about the number of expected columns
+                        const rawValues = parseTabSeparatedLine(line, columnNames.length);
 
-                    // Ensure we have the same number of values as columns
-                    const values = Array(columnNames.length)
-                        .fill(null)
-                        .map((_, index) => {
-                            const val = rawValues[index];
-                            return escapePostgreSQLValue(val);
-                        })
-                        .join(', ');
+                        // Ensure we have the same number of values as columns
+                        const values = Array(columnNames.length)
+                            .fill(null)
+                            .map((_, index) => {
+                                const val = rawValues[index];
+                                try {
+                                    return escapePostgreSQLValue(val);
+                                } catch (escapeError) {
+                                    console.warn(
+                                        `Warning: Error escaping value at column ${index} (${
+                                            columnNames[index]
+                                        }) on line ${lineIndex + 1} of table ${cleanTableName}:`,
+                                        escapeError.message
+                                    );
+                                    console.warn(`Problematic value:`, val);
+                                    // Return a safe fallback
+                                    return 'NULL';
+                                }
+                            })
+                            .join(', ');
 
-                    const columnList = columnNames.map((col) => `"${col}"`).join(', ');
-                    return `INSERT INTO "${cleanTableName}" (${columnList}) VALUES (${values});`;
+                        const columnList = columnNames.map((col) => `"${col}"`).join(', ');
+                        return `INSERT INTO "${cleanTableName}" (${columnList}) VALUES (${values});`;
+                    } catch (lineError) {
+                        console.warn(
+                            `Warning: Error processing line ${
+                                lineIndex + 1
+                            } of table ${cleanTableName}:`,
+                            lineError.message
+                        );
+                        console.warn(`Problematic line:`, line);
+                        // Return a comment instead of breaking the entire process
+                        return `-- ERROR: Could not process line ${lineIndex + 1}: ${
+                            lineError.message
+                        }`;
+                    }
                 })
                 .join('\n');
 
