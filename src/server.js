@@ -84,10 +84,19 @@ if (AUTO_CLEAN_DAYS > 0) {
 // Home: show form + backup list
 app.get('/', (req, res) => {
     const files = listBackups(BACKUP_DIR);
+
+    // Get message from query parameters
+    let message = null;
+    if (req.query.message) {
+        message = req.query.message;
+    } else if (req.query.error) {
+        message = `Error: ${req.query.error}`;
+    }
+
     res.render('index', {
         title: TITLE,
         files,
-        message: null,
+        message,
         defaults: {
             format: process.env.DEFAULT_FORMAT || 'plain',
             outputStyle: process.env.DEFAULT_OUTPUT_STYLE || 'standard',
@@ -191,41 +200,11 @@ app.post('/backup', async (req, res) => {
             connectionOptions: { host, port, db }
         });
 
-        const files = listBackups(BACKUP_DIR);
-        return res.status(200).render('index', {
-            title: TITLE,
-            files,
-            message: `Backup created: ${baseName}`,
-            defaults: {
-                format,
-                outputStyle,
-                insertFormat,
-                includeOwner,
-                onlySchema,
-                onlyData,
-                excludeSchema,
-                compressLevel,
-                extraArgs
-            }
-        });
+        // Redirect to home page with success message
+        return res.redirect('/?message=' + encodeURIComponent(`Backup created: ${baseName}`));
     } catch (err) {
-        const files = listBackups(BACKUP_DIR);
-        return res.status(400).render('index', {
-            title: TITLE,
-            files,
-            message: `Error: ${err.message || String(err)}`,
-            defaults: {
-                format: req.body.format || 'plain',
-                outputStyle: req.body.outputStyle || 'standard',
-                insertFormat: req.body.insertFormat || 'copy',
-                includeOwner: req.body.includeOwner,
-                onlySchema: req.body.onlySchema,
-                onlyData: req.body.onlyData,
-                excludeSchema: req.body.excludeSchema,
-                compressLevel: req.body.compressLevel,
-                extraArgs: req.body.extraArgs
-            }
-        });
+        // Redirect to home page with error message
+        return res.redirect('/?error=' + encodeURIComponent(err.message || String(err)));
     }
 });
 
