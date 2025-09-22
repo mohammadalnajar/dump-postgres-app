@@ -90,8 +90,7 @@ function removePgDumpHeaders(content) {
         /^SET xmloption/,
         /^SET client_min_messages/,
         /^SET row_security/,
-        /^--$/,
-        /^--$/, // Remove standalone comment lines
+        /^SET default_table_access_method/,
         /^COMMENT ON EXTENSION/,
         /^CREATE EXTENSION/,
         /^ALTER FUNCTION .* OWNER TO/,
@@ -102,35 +101,93 @@ function removePgDumpHeaders(content) {
 
     const lines = content.split('\n');
     const filteredLines = [];
-    let skipFunctionBlock = false;
+    let skipBlock = false;
+    let blockType = '';
+    let dollarQuoteTag = '';
+    let braceDepth = 0;
 
-    for (const line of lines) {
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
         const trimmedLine = line.trim();
 
-        // Skip function definitions (they're verbose in pg_dump)
-        if (
-            trimmedLine.startsWith('CREATE FUNCTION') ||
-            trimmedLine.startsWith('CREATE OR REPLACE FUNCTION')
-        ) {
-            skipFunctionBlock = true;
-            continue;
+        // Detect start of blocks to skip
+        if (!skipBlock) {
+            // Skip extension functions (those with $libdir)
+            if (
+                (trimmedLine.startsWith('CREATE FUNCTION') ||
+                    trimmedLine.startsWith('CREATE OR REPLACE FUNCTION')) &&
+                (trimmedLine.includes('$libdir/') || trimmedLine.includes('pgcrypto'))
+            ) {
+                skipBlock = true;
+                blockType = 'extension_function';
+                continue;
+            }
+
+            // Skip postgres system function comments
+            if (
+                trimmedLine.startsWith('-- Name:') &&
+                trimmedLine.includes('Type: FUNCTION') &&
+                trimmedLine.includes('Owner: postgres')
+            ) {
+                skipBlock = true;
+                blockType = 'function_comment';
+                continue;
+            }
         }
 
-        if (
-            skipFunctionBlock &&
-            (trimmedLine.includes('$function$') || trimmedLine.includes('$$'))
-        ) {
-            skipFunctionBlock = false;
-            continue;
+        // Handle skipping logic
+        if (skipBlock) {
+            if (blockType === 'extension_function') {
+                // Look for end of function (either ; followed by empty line, or ALTER FUNCTION)
+                if (
+                    trimmedLine.endsWith(';') &&
+                    i + 1 < lines.length &&
+                    lines[i + 1].trim() === ''
+                ) {
+                    skipBlock = false;
+                    blockType = '';
+                    continue;
+                }
+                if (trimmedLine.startsWith('ALTER FUNCTION')) {
+                    skipBlock = false;
+                    blockType = '';
+                    continue;
+                }
+                continue;
+            }
+
+            if (blockType === 'function_comment') {
+                // Skip until we find the actual function definition or something else
+                if (
+                    trimmedLine.startsWith('CREATE FUNCTION') ||
+                    trimmedLine.startsWith('CREATE OR REPLACE FUNCTION')
+                ) {
+                    // Check if this is an extension function we should skip
+                    if (trimmedLine.includes('$libdir/') || trimmedLine.includes('pgcrypto')) {
+                        blockType = 'extension_function';
+                        continue;
+                    } else {
+                        // This is a user function, stop skipping
+                        skipBlock = false;
+                        blockType = '';
+                    }
+                } else if (
+                    trimmedLine.startsWith('CREATE ') ||
+                    trimmedLine.startsWith('-- ') ||
+                    trimmedLine === ''
+                ) {
+                    // Continue skipping
+                    continue;
+                } else {
+                    // This might be a stray function body, skip it
+                    continue;
+                }
+            }
         }
 
-        if (skipFunctionBlock) {
-            continue;
-        }
-
-        // Check if line should be removed
+        // Check if line should be removed based on patterns
         const shouldRemove = linesToRemove.some((pattern) => pattern.test(trimmedLine));
-        if (!shouldRemove) {
+        if (!shouldRemove && !skipBlock) {
             filteredLines.push(line);
         }
     }
