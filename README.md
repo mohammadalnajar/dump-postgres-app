@@ -1,8 +1,12 @@
-# Simple Postgres Backup (Express + pg_dump)
+# Postgres Dump App (Express + pg_dump)
 
-A tiny, single-page Node.js/Express app to generate PostgreSQL backups (via `pg_dump`) from any reachable Postgres server. Fill a form (host/user/db/password + a few options), click **Backup**, and download your `.sql` / `.dump` / `.tar## "Navicat-like" behavior
+A tiny, single-page Node.js/Express app to generate PostgreSQL backups (via `pg_dump`) from any reachable Postgres server. Fill a form (host/user/db/password + a few options), click **Backup**, and download your `.sql` / `.dump` / `.tar` (or directory) file. Designed to be simple,---
 
-Th## "Navicat-like" behavior
+## Development (optional)l, and production-friendly. Runs in Docker.
+
+**NEW:** Supports **Navicat-style formatting** to generate SQL dumps that match the structure and formatting of Navicat-generated exports!
+
+## "Navicat-like" behavior
 
 - **Professional SQL structure**: Generates clean, organized SQL dumps with Navicat-style headers and formatting
 - **Function handling**: Automatically adds `DROP FUNCTION IF EXISTS` statements before user-defined functions to prevent "already exists" errors during import
@@ -42,9 +46,7 @@ Th## "Navicat-like" behavior
 - For sharing database structures with team members
 - When migrating between different database management tools
 - For documentation and version control purposes
-- When you prefer INSERT statements for selective data importsdirectory) file. Designed to be simple, professional, and production-friendly. Runs in Docker.
-
-**NEW:** Supports **Navicat-style formatting** to generate SQL dumps that match the structure and formatting of Navicat-generated exports!
+- When you prefer INSERT statements for selective data imports
 
 ---
 
@@ -67,7 +69,7 @@ Th## "Navicat-like" behavior
 ## Project Structure
 
 ```
-simple-pg-backup/
+dump-postgres-app/
 ├─ docker-compose.yml
 ├─ Dockerfile
 ├─ .env.example            # copy to .env and edit
@@ -128,25 +130,25 @@ If you configured Basic Auth, your browser will prompt for credentials.
 
 ## Environment Variables
 
-| Variable                 |                  Default | Description                                                           |
-| ------------------------ | -----------------------: | --------------------------------------------------------------------- |
-| `APP_PORT`               |                   `8080` | Internal Express port (exposed via Compose).                          |
-| `APP_BASE_PATH`          |                      `/` | Set if you’ll run under a sub-path behind a reverse proxy.            |
-| `APP_TITLE`              | `Simple Postgres Backup` | Page title.                                                           |
-| `BASIC_AUTH_USER`        |                *(empty)* | If set along with `BASIC_AUTH_PASS`, enables Basic Auth.              |
-| `BASIC_AUTH_PASS`        |                *(empty)* | Basic Auth password.                                                  |
-| `RATE_LIMIT_WINDOW_MS`   |                  `60000` | Rate limit window in ms.                                              |
-| `RATE_LIMIT_MAX`         |                     `20` | Max requests per window per IP.                                       |
-| `DEFAULT_FORMAT`         |                  `plain` | `plain` \| `custom` \| `directory` \| `tar`.                          |
-| `DEFAULT_OUTPUT_STYLE`   |               `standard` | `standard` \| `navicat` - Output formatting style.                    |
-| `DEFAULT_INSERT_FORMAT`  |                   `copy` | `copy` \| `inserts` - Data format for Navicat style.                  |
-| `DEFAULT_INCLUDE_OWNER`  |                   `true` | `true`/`false` to include owner statements (`--no-owner` when false). |
-| `DEFAULT_COMPRESS_LEVEL` |                      `0` | `0..9` (for `custom`/`tar`).                                          |
-| `DEFAULT_EXCLUDE_SCHEMA` |                *(empty)* | Schema name to exclude (e.g., `information_schema`).                  |
-| `DEFAULT_ONLY_SCHEMA`    |                *(empty)* | Schema name to dump only (e.g., `public`).                            |
-| `DEFAULT_ONLY_DATA`      |                  `false` | If true, `--data-only`.                                               |
-| `DEFAULT_EXTRA_ARGS`     |                *(empty)* | Additional pg_dump flags (e.g., `--no-privileges`).                   |
-| `AUTO_CLEAN_DAYS`        |                *(empty)* | If set (e.g., `14`), delete backups older than N days.                |
+| Variable                 |             Default | Description                                                           |
+| ------------------------ | ------------------: | --------------------------------------------------------------------- |
+| `APP_PORT`               |              `8080` | Internal Express port (exposed via Compose).                          |
+| `APP_BASE_PATH`          |                 `/` | Set if you’ll run under a sub-path behind a reverse proxy.            |
+| `APP_TITLE`              | `Postgres Dump App` | Page title.                                                           |
+| `BASIC_AUTH_USER`        |           *(empty)* | If set along with `BASIC_AUTH_PASS`, enables Basic Auth.              |
+| `BASIC_AUTH_PASS`        |           *(empty)* | Basic Auth password.                                                  |
+| `RATE_LIMIT_WINDOW_MS`   |             `60000` | Rate limit window in ms.                                              |
+| `RATE_LIMIT_MAX`         |                `20` | Max requests per window per IP.                                       |
+| `DEFAULT_FORMAT`         |             `plain` | `plain` \| `custom` \| `directory` \| `tar`.                          |
+| `DEFAULT_OUTPUT_STYLE`   |          `standard` | `standard` \| `navicat` - Output formatting style.                    |
+| `DEFAULT_INSERT_FORMAT`  |              `copy` | `copy` \| `inserts` - Data format for Navicat style.                  |
+| `DEFAULT_INCLUDE_OWNER`  |              `true` | `true`/`false` to include owner statements (`--no-owner` when false). |
+| `DEFAULT_COMPRESS_LEVEL` |                 `0` | `0..9` (for `custom`/`tar`).                                          |
+| `DEFAULT_EXCLUDE_SCHEMA` |           *(empty)* | Schema name to exclude (e.g., `information_schema`).                  |
+| `DEFAULT_ONLY_SCHEMA`    |           *(empty)* | Schema name to dump only (e.g., `public`).                            |
+| `DEFAULT_ONLY_DATA`      |             `false` | If true, `--data-only`.                                               |
+| `DEFAULT_EXTRA_ARGS`     |           *(empty)* | Additional pg_dump flags (e.g., `--no-privileges`).                   |
+| `AUTO_CLEAN_DAYS`        |           *(empty)* | If set (e.g., `14`), delete backups older than N days.                |
 
 ---
 
@@ -251,7 +253,7 @@ pg_restore -h HOST -U USER -d TARGETDB mydb_20250101_120000.dump
 You can also trigger a backup via the optional shell script:
 
 ```bash
-docker exec -it simple-pg-backup   /app/scripts/backup.sh   --host db.example.com --port 5432 --db mydb --user dbuser --password 'secret'   --format custom --include-owner true --compress-level 5   --extra-args "--no-privileges"
+docker exec -it dump-postgres-app   /app/scripts/backup.sh   --host db.example.com --port 5432 --db mydb --user dbuser --password 'secret'   --format custom --include-owner true --compress-level 5   --extra-args "--no-privileges"
 ```
 
 The file will appear in `/app/backups` (mounted to `./backups` on the host).
@@ -267,7 +269,7 @@ Use host cron to run periodic backups via `docker exec`:
 sudo crontab -e
 
 # Every night at 02:15 (UTC): custom format, compress level 5
-15 2 * * * docker exec simple-pg-backup /app/scripts/backup.sh   --host db.example.com --port 5432 --db mydb --user dbuser --password 'secret'   --format custom --include-owner true --compress-level 5 >> /var/log/pgbackup.log 2>&1
+15 2 * * * docker exec dump-postgres-app /app/scripts/backup.sh   --host db.example.com --port 5432 --db mydb --user dbuser --password 'secret'   --format custom --include-owner true --compress-level 5 >> /var/log/pgbackup.log 2>&1
 ```
 
 Or run a small scheduler container that POSTs to `http://app:8080/backup` with Basic Auth.

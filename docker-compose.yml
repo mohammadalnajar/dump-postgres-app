@@ -2,7 +2,7 @@ version: '3.9'
 services:
     app:
         build: .
-        container_name: simple-pg-backup
+        container_name: dump-postgres-app
         env_file:
             - .env
         ports:

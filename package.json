@@ -1,5 +1,5 @@
 {
-    "name": "simple-pg-backup",
+    "name": "dump-postgres-app",
     "version": "1.0.0",
     "description": "Tiny Express UI to create Postgres backups using pg_dump",
     "main": "src/server.js",
