@@ -203,6 +203,7 @@ app.post('/backup', async (req, res) => {
         // Redirect to home page with success message
         return res.redirect('/?message=' + encodeURIComponent(`Backup created: ${baseName}`));
     } catch (err) {
+        console.error('Backup error:', err);
         // Redirect to home page with error message
         return res.redirect('/?error=' + encodeURIComponent(err.message || String(err)));
     }

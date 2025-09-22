@@ -118,7 +118,8 @@ export async function runPgDump({
                         resolve({ ok: true, outputPath, stderr: '' });
                     }
                 } else {
-                    reject(new Error(`pg_dump exited with code ${code}`));
+                    const errorMsg = stderr.trim() || `pg_dump exited with code ${code}`;
+                    reject(new Error(`pg_dump failed: ${errorMsg}`));
                 }
             });
         }
@@ -131,7 +132,8 @@ export async function runPgDump({
         if (!useStdout) {
             child.on('close', (code) => {
                 if (code === 0) return resolve({ ok: true, outputPath, stderr });
-                reject(new Error(stderr || `pg_dump exited with code ${code}`));
+                const errorMsg = stderr.trim() || `pg_dump exited with code ${code}`;
+                reject(new Error(`pg_dump failed: ${errorMsg}`));
             });
         }
     });
