@@ -90,6 +90,8 @@ app.get('/', (req, res) => {
         message: null,
         defaults: {
             format: process.env.DEFAULT_FORMAT || 'plain',
+            outputStyle: process.env.DEFAULT_OUTPUT_STYLE || 'standard',
+            insertFormat: process.env.DEFAULT_INSERT_FORMAT || 'copy',
             includeOwner:
                 process.env.DEFAULT_INCLUDE_OWNER === 'true'
                     ? true
@@ -120,6 +122,18 @@ app.post('/backup', async (req, res) => {
             'plain'
         );
 
+        const outputStyle = enumOf(
+            req.body.outputStyle || process.env.DEFAULT_OUTPUT_STYLE || 'standard',
+            ['standard', 'navicat'],
+            'standard'
+        );
+
+        const insertFormat = enumOf(
+            req.body.insertFormat || process.env.DEFAULT_INSERT_FORMAT || 'copy',
+            ['copy', 'inserts'],
+            'copy'
+        );
+
         const includeOwnerVal = req.body.includeOwner;
         const includeOwner = includeOwnerVal === '' ? undefined : optionalBool(includeOwnerVal);
 
@@ -139,7 +153,7 @@ app.post('/backup', async (req, res) => {
         // Compute filename
         const safeDb = sanitizeName(db);
         const stamp = timestamp();
-        const ext = extensionFor(format);
+        const ext = extensionFor(format, outputStyle);
         const baseName = `${safeDb}_${stamp}${ext || ''}`;
         const outPath = path.join(BACKUP_DIR, baseName);
 
@@ -156,7 +170,9 @@ app.post('/backup', async (req, res) => {
             onlyData,
             excludeSchema,
             extraArgs,
-            password
+            password,
+            outputStyle,
+            insertFormat
         });
 
         // If directory format, outPath must be a directory
@@ -166,7 +182,14 @@ app.post('/backup', async (req, res) => {
             // we pass -f via runPgDump (non-plain branch)
         }
 
-        await runPgDump({ args, envPassword: password, outputPath: outPath, format });
+        await runPgDump({
+            args,
+            envPassword: password,
+            outputPath: outPath,
+            format,
+            outputStyle,
+            connectionOptions: { host, port, db }
+        });
 
         const files = listBackups(BACKUP_DIR);
         return res.status(200).render('index', {
@@ -175,6 +198,8 @@ app.post('/backup', async (req, res) => {
             message: `Backup created: ${baseName}`,
             defaults: {
                 format,
+                outputStyle,
+                insertFormat,
                 includeOwner,
                 onlySchema,
                 onlyData,
@@ -191,6 +216,8 @@ app.post('/backup', async (req, res) => {
             message: `Error: ${err.message || String(err)}`,
             defaults: {
                 format: req.body.format || 'plain',
+                outputStyle: req.body.outputStyle || 'standard',
+                insertFormat: req.body.insertFormat || 'copy',
                 includeOwner: req.body.includeOwner,
                 onlySchema: req.body.onlySchema,
                 onlyData: req.body.onlyData,

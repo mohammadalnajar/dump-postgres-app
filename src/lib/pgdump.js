@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { postProcessToNavicatStyle } from './navicat-formatter.js';
 
 export function buildPgDumpArgs({
     host,
@@ -14,7 +15,9 @@ export function buildPgDumpArgs({
     onlyData,
     excludeSchema,
     extraArgs,
-    password
+    password,
+    outputStyle = 'standard',
+    insertFormat = 'copy'
 }) {
     const args = [];
 
@@ -25,6 +28,24 @@ export function buildPgDumpArgs({
     // Format
     // plain -> .sql ; custom -> .dump ; directory -> dir ; tar -> .tar
     if (format) args.push('-F', format);
+
+    // Handle Navicat-style formatting options
+    if (outputStyle === 'navicat') {
+        // Force plain format for Navicat style processing
+        args.push('-F', 'plain');
+
+        // Navicat-like options
+        args.push('--no-privileges'); // Don't dump privileges
+        args.push('--no-tablespaces'); // Don't dump tablespaces
+
+        if (insertFormat === 'inserts') {
+            args.push('--inserts'); // Use INSERT statements instead of COPY
+            args.push('--column-inserts'); // Include column names in INSERTs
+        }
+    } else {
+        // Standard format handling
+        if (format) args.push('-F', format);
+    }
 
     if (includeOwner === true) {
         args.push('--no-acl'); // keep ownership statements only? Navicat-like behavior varies.
@@ -52,12 +73,19 @@ export function buildPgDumpArgs({
     return args;
 }
 
-export async function runPgDump({ args, envPassword, outputPath, format }) {
+export async function runPgDump({
+    args,
+    envPassword,
+    outputPath,
+    format,
+    outputStyle = 'standard',
+    connectionOptions = {}
+}) {
     return new Promise((resolve, reject) => {
         // For plain format, we redirect stdout to a .sql file.
         // For custom/tar, use -f, but we kept outputPath for both cases by adding -f when not plain.
         // Here, ensure we pass -f for non-plain; for plain we capture stdout.
-        const useStdout = format === 'plain';
+        const useStdout = format === 'plain' || outputStyle === 'navicat';
 
         const effectiveArgs = [...args];
         if (!useStdout) {
@@ -70,8 +98,29 @@ export async function runPgDump({ args, envPassword, outputPath, format }) {
         });
 
         if (useStdout) {
-            const fileStream = fs.createWriteStream(outputPath, { flags: 'w' });
+            const tempPath = outputStyle === 'navicat' ? `${outputPath}.tmp` : outputPath;
+            const fileStream = fs.createWriteStream(tempPath, { flags: 'w' });
             child.stdout.pipe(fileStream);
+
+            // If Navicat style, we'll post-process after completion
+            child.on('close', (code) => {
+                if (code === 0) {
+                    if (outputStyle === 'navicat') {
+                        // Post-process the temporary file to Navicat style
+                        postProcessToNavicatStyle(tempPath, outputPath, connectionOptions)
+                            .then(() => {
+                                // Clean up temp file
+                                fs.unlinkSync(tempPath);
+                                resolve({ ok: true, outputPath, stderr: '' });
+                            })
+                            .catch(reject);
+                    } else {
+                        resolve({ ok: true, outputPath, stderr: '' });
+                    }
+                } else {
+                    reject(new Error(`pg_dump exited with code ${code}`));
+                }
+            });
         }
 
         let stderr = '';
@@ -79,14 +128,21 @@ export async function runPgDump({ args, envPassword, outputPath, format }) {
             stderr += d.toString();
         });
 
-        child.on('close', (code) => {
-            if (code === 0) return resolve({ ok: true, outputPath, stderr });
-            reject(new Error(stderr || `pg_dump exited with code ${code}`));
-        });
+        if (!useStdout) {
+            child.on('close', (code) => {
+                if (code === 0) return resolve({ ok: true, outputPath, stderr });
+                reject(new Error(stderr || `pg_dump exited with code ${code}`));
+            });
+        }
     });
 }
 
-export function extensionFor(format) {
+export function extensionFor(format, outputStyle = 'standard') {
+    // For Navicat style, always use .sql regardless of format
+    if (outputStyle === 'navicat') {
+        return '.sql';
+    }
+
     switch (format) {
         case 'custom':
             return '.dump';

@@ -64,6 +64,26 @@ button {
 button:hover {
     filter: brightness(1.1);
 }
+select:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+select:disabled:hover {
+    filter: none;
+}
+.format-info {
+    display: none;
+    padding: 0.5rem;
+    background: #1e293b;
+    border: 1px solid #374151;
+    border-radius: 6px;
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: #94a3b8;
+}
+.format-info.show {
+    display: block;
+}
 .message {
     background: #0f5132;
     border: 1px solid #14532d;

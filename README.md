@@ -1,6 +1,38 @@
 # Simple Postgres Backup (Express + pg_dump)
 
-A tiny, single-page Node.js/Express app to generate PostgreSQL backups (via `pg_dump`) from any reachable Postgres server. Fill a form (host/user/db/password + a few options), click **Backup**, and download your `.sql` / `.dump` / `.tar` (or directory) file. Designed to be simple, professional, and production-friendly. Runs in Docker.
+A tiny, single-page Node.js/Express app to generate PostgreSQL backups (via `pg_dump`) from any reachable Postgres server. Fill a form (host/user/db/password + a few options), click **Backup**, and download your `.sql` / `.dump` / `.tar## "Navicat-like" behavior
+
+The app now offers **two output styles**:
+
+### Standard pg_dump Style
+- Traditional PostgreSQL dump format
+- Includes all pg_dump metadata and settings
+- Uses COPY statements for data (faster for large datasets)
+- Maintains all PostgreSQL-specific features
+
+### Navicat-like Style  
+- **Professional header** with source server information, version, and timestamp
+- **Organized structure** with clear section comments for sequences, tables, and data
+- **Clean formatting** with proper DROP TABLE IF EXISTS statements
+- **Transaction blocks** for data inserts (BEGIN/COMMIT)
+- **Choice of data format**: COPY statements or INSERT statements
+- **Simplified output** without pg_dump metadata and function definitions
+
+**Key differences from standard pg_dump:**
+- Rich metadata header similar to Navicat exports
+- Better organization with descriptive section comments
+- Optional INSERT statements instead of COPY (useful for selective imports)
+- Cleaner, more readable structure
+- Consistent formatting and spacing
+
+**When to use Navicat-like style:**
+- When you need cleaner, more readable SQL files
+- For sharing database structures with team members
+- When migrating between different database management tools
+- For documentation and version control purposes
+- When you prefer INSERT statements for selective data importsdirectory) file. Designed to be simple, professional, and production-friendly. Runs in Docker.
+
+**NEW:** Supports **Navicat-style formatting** to generate SQL dumps that match the structure and formatting of Navicat-generated exports!
 
 ---
 
@@ -9,6 +41,8 @@ A tiny, single-page Node.js/Express app to generate PostgreSQL backups (via `pg_
 - ✅ One-page UI (EJS) with a clean dark theme  
 - ✅ Uses official `pg_dump` (PostgreSQL client) under the hood  
 - ✅ Output formats: **plain SQL**, **custom** (`.dump`), **tar**, **directory**  
+- ✅ **NEW: Navicat-style formatting** with professional header and organized structure
+- ✅ **NEW: Flexible data output** - choose between COPY statements or INSERT statements
 - ✅ Options: include owner, schema-only, data-only, exclude schema, compression, extra args  
 - ✅ Timestamped, sanitized filenames (Navicat-style vibe)  
 - ✅ List, download, and delete backup files  
@@ -33,6 +67,7 @@ simple-pg-backup/
 │  │  └─ index.ejs
 │  ├─ lib/
 │  │  ├─ pgdump.js
+│  │  ├─ navicat-formatter.js    # NEW: Navicat-style formatting
 │  │  ├─ sanitize.js
 │  │  └─ validate.js
 │  └─ public/
@@ -81,23 +116,25 @@ If you configured Basic Auth, your browser will prompt for credentials.
 
 ## Environment Variables
 
-| Variable | Default | Description |
-|---|---:|---|
-| `APP_PORT` | `8080` | Internal Express port (exposed via Compose). |
-| `APP_BASE_PATH` | `/` | Set if you’ll run under a sub-path behind a reverse proxy. |
-| `APP_TITLE` | `Simple Postgres Backup` | Page title. |
-| `BASIC_AUTH_USER` | *(empty)* | If set along with `BASIC_AUTH_PASS`, enables Basic Auth. |
-| `BASIC_AUTH_PASS` | *(empty)* | Basic Auth password. |
-| `RATE_LIMIT_WINDOW_MS` | `60000` | Rate limit window in ms. |
-| `RATE_LIMIT_MAX` | `20` | Max requests per window per IP. |
-| `DEFAULT_FORMAT` | `plain` | `plain` \| `custom` \| `directory` \| `tar`. |
-| `DEFAULT_INCLUDE_OWNER` | `true` | `true`/`false` to include owner statements (`--no-owner` when false). |
-| `DEFAULT_COMPRESS_LEVEL` | `0` | `0..9` (for `custom`/`tar`). |
-| `DEFAULT_EXCLUDE_SCHEMA` | *(empty)* | Schema name to exclude (e.g., `information_schema`). |
-| `DEFAULT_ONLY_SCHEMA` | *(empty)* | Schema name to dump only (e.g., `public`). |
-| `DEFAULT_ONLY_DATA` | `false` | If true, `--data-only`. |
-| `DEFAULT_EXTRA_ARGS` | *(empty)* | Additional pg_dump flags (e.g., `--no-privileges`). |
-| `AUTO_CLEAN_DAYS` | *(empty)* | If set (e.g., `14`), delete backups older than N days. |
+| Variable                 |                  Default | Description                                                           |
+| ------------------------ | -----------------------: | --------------------------------------------------------------------- |
+| `APP_PORT`               |                   `8080` | Internal Express port (exposed via Compose).                          |
+| `APP_BASE_PATH`          |                      `/` | Set if you’ll run under a sub-path behind a reverse proxy.            |
+| `APP_TITLE`              | `Simple Postgres Backup` | Page title.                                                           |
+| `BASIC_AUTH_USER`        |                *(empty)* | If set along with `BASIC_AUTH_PASS`, enables Basic Auth.              |
+| `BASIC_AUTH_PASS`        |                *(empty)* | Basic Auth password.                                                  |
+| `RATE_LIMIT_WINDOW_MS`   |                  `60000` | Rate limit window in ms.                                              |
+| `RATE_LIMIT_MAX`         |                     `20` | Max requests per window per IP.                                       |
+| `DEFAULT_FORMAT`         |                  `plain` | `plain` \| `custom` \| `directory` \| `tar`.                          |
+| `DEFAULT_OUTPUT_STYLE`   |               `standard` | `standard` \| `navicat` - Output formatting style.                    |
+| `DEFAULT_INSERT_FORMAT`  |                   `copy` | `copy` \| `inserts` - Data format for Navicat style.                  |
+| `DEFAULT_INCLUDE_OWNER`  |                   `true` | `true`/`false` to include owner statements (`--no-owner` when false). |
+| `DEFAULT_COMPRESS_LEVEL` |                      `0` | `0..9` (for `custom`/`tar`).                                          |
+| `DEFAULT_EXCLUDE_SCHEMA` |                *(empty)* | Schema name to exclude (e.g., `information_schema`).                  |
+| `DEFAULT_ONLY_SCHEMA`    |                *(empty)* | Schema name to dump only (e.g., `public`).                            |
+| `DEFAULT_ONLY_DATA`      |                  `false` | If true, `--data-only`.                                               |
+| `DEFAULT_EXTRA_ARGS`     |                *(empty)* | Additional pg_dump flags (e.g., `--no-privileges`).                   |
+| `AUTO_CLEAN_DAYS`        |                *(empty)* | If set (e.g., `14`), delete backups older than N days.                |
 
 ---
 
@@ -105,11 +142,73 @@ If you configured Basic Auth, your browser will prompt for credentials.
 
 1. Go to the home page.
 2. Fill connection details: **Host**, **Port**, **Database**, **User**, **Password**.
-3. Choose **Format** and any options (include owner, schema-only, etc.).
-4. Click **Create Backup**.
-5. Scroll to **Backups** list to **Download** or **Delete** files.
+3. Choose **Format** and **Output Style**:
+   - **Standard pg_dump**: Traditional PostgreSQL dump format
+   - **Navicat-like**: Professional formatting with Navicat-style headers and organization
+4. For Navicat-like style, choose **Data Format**:
+   - **COPY statements**: Traditional COPY FROM stdin format
+   - **INSERT statements**: Individual INSERT statements with column names
+5. Configure other options (include owner, schema-only, etc.).
+6. Click **Create Backup**.
+7. Scroll to **Backups** list to **Download** or **Delete** files.
 
 > Password is passed to `pg_dump` via the `PGPASSWORD` environment variable **only** for the spawned process. The app does not log or persist credentials.
+
+## Output Formats Comparison
+
+### Standard pg_dump Format
+```sql
+--
+-- PostgreSQL database dump
+--
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+...
+
+CREATE TABLE public.users (
+    id integer NOT NULL,
+    name character varying(255)
+);
+
+COPY public.users (id, name) FROM stdin;
+1	John Doe
+2	Jane Smith
+\.
+```
+
+### Navicat-like Format
+```sql
+/*
+ Navicat Premium Data Transfer
+
+ Source Server         : PostgreSQL Server
+ Source Server Type    : PostgreSQL
+ Source Host           : localhost:5432
+ Source Catalog        : mydb
+ Source Schema         : public
+
+ Date: 22/09/2025 08:17:22
+*/
+
+-- ----------------------------
+-- Table structure for users
+-- ----------------------------
+DROP TABLE IF EXISTS "users";
+CREATE TABLE "users" (
+  "id" int4 NOT NULL,
+  "name" varchar(255) COLLATE "pg_catalog"."default"
+)
+;
+
+-- ----------------------------
+-- Records of users
+-- ----------------------------
+BEGIN;
+INSERT INTO "users" ("id", "name") VALUES (1, 'John Doe');
+INSERT INTO "users" ("id", "name") VALUES (2, 'Jane Smith');
+COMMIT;
+```
 
 ---
 

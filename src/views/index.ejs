@@ -37,6 +37,20 @@
                         </select>
                     </label>
 
+                    <label>Output Style
+                        <select name="outputStyle" id="outputStyle">
+                            <option value="standard" <%= defaults.outputStyle==='standard'?'selected':'' %>>Standard pg_dump</option>
+                            <option value="navicat" <%= defaults.outputStyle==='navicat'?'selected':'' %>>Navicat-like</option>
+                        </select>
+                    </label>
+
+                    <label>Data Format (for Navicat style)
+                        <select name="insertFormat" id="insertFormat">
+                            <option value="copy" <%= defaults.insertFormat==='copy'?'selected':'' %>>COPY statements</option>
+                            <option value="inserts" <%= defaults.insertFormat==='inserts'?'selected':'' %>>INSERT statements</option>
+                        </select>
+                    </label>
+
                     <label>Include owner?
                         <select name="includeOwner">
                             <option value="">Default</option>
@@ -111,6 +125,33 @@
             </table>
         </section>
     </main>
+
+    <script>
+        // Show/hide options based on output style
+        function toggleFormatOptions() {
+            const outputStyle = document.getElementById('outputStyle').value;
+            const insertFormatLabel = document.querySelector('label:has(#insertFormat)');
+            const formatSelect = document.querySelector('select[name="format"]');
+            const compressLabel = document.querySelector('label:has(input[name="compressLevel"])');
+            
+            if (outputStyle === 'navicat') {
+                insertFormatLabel.style.display = 'block';
+                // Disable format selection for Navicat style (always uses plain)
+                formatSelect.disabled = true;
+                formatSelect.value = 'plain';
+                compressLabel.style.display = 'none';
+            } else {
+                insertFormatLabel.style.display = 'none';
+                formatSelect.disabled = false;
+                compressLabel.style.display = 'block';
+            }
+        }
+
+        document.getElementById('outputStyle').addEventListener('change', toggleFormatOptions);
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', toggleFormatOptions);
+    </script>
 </body>
 
 </html>
