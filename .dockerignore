@@ -4,8 +4,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Environment files
-.env
+# Environment files (keep .env for docker-compose env_file usage)
+# .env  # Commented out - needed for docker-compose env_file
 .env.local
 .env.development.local
 .env.test.local
