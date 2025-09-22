@@ -258,10 +258,16 @@ COMMIT;\n\n`;
 
             const insertStatements = dataLines
                 .map((line) => {
-                    const values = line
-                        .split('\t')
-                        .map((val) => {
-                            if (val === '\\N') return 'NULL';
+                    const rawValues = line.split('\t');
+                    const columnCount = columnNames.length;
+
+                    // Ensure we have the same number of values as columns
+                    // Fill missing values with NULL
+                    const values = Array(columnCount)
+                        .fill(null)
+                        .map((_, index) => {
+                            const val = rawValues[index];
+                            if (val === undefined || val === '\\N') return 'NULL';
                             if (val.match(/^\d+$/)) return val;
                             if (val.match(/^\d+\.\d+$/)) return val;
                             if (val === 't') return 'true';
