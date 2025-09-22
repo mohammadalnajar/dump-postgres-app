@@ -2,7 +2,17 @@
 
 A tiny, single-page Node.js/Express app to generate PostgreSQL backups (via `pg_dump`) from any reachable Postgres server. Fill a form (host/user/db/password + a few options), click **Backup**, and download your `.sql` / `.dump` / `.tar## "Navicat-like" behavior
 
-The app now offers **two output styles**:
+Th## "Navicat-like" behavior
+
+- **Professional SQL structure**: Generates clean, organized SQL dumps with Navicat-style headers and formatting
+- **Function handling**: Automatically adds `DROP FUNCTION IF EXISTS` statements before user-defined functions to prevent "already exists" errors during import
+- **Extension function filtering**: PostgreSQL extension functions (pgcrypto, etc.) are excluded to avoid conflicts with existing database installations
+- **Table management**: Includes `DROP TABLE IF EXISTS` statements for safe re-imports
+- **Data format options**: Choose between COPY statements (faster) or INSERT statements (more compatible)
+- **Owner handling**: Navicat's "Include Owner" toggles ownership/ACL statements.  
+  `pg_dump` includes owner by default; choosing **No** adds `--no-owner`.  
+- **File naming**: Timestamped format: `db_YYYYMMDD_HHMMSS.ext`.
+- **Flexible restore**: Use **custom** format (`.dump`) to get Navicat-like flexible restores via `pg_restore`.now offers **two output styles**:
 
 ### Standard pg_dump Style
 - Traditional PostgreSQL dump format
@@ -22,6 +32,8 @@ The app now offers **two output styles**:
 - Rich metadata header similar to Navicat exports
 - Better organization with descriptive section comments
 - Optional INSERT statements instead of COPY (useful for selective imports)
+- **Smart function handling** with DROP FUNCTION IF EXISTS statements
+- **Extension function filtering** to prevent conflicts with existing database functions
 - Cleaner, more readable structure
 - Consistent formatting and spacing
 

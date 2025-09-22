@@ -103,23 +103,22 @@ function removePgDumpHeaders(content) {
     const filteredLines = [];
     let skipBlock = false;
     let blockType = '';
-    let dollarQuoteTag = '';
-    let braceDepth = 0;
+    let functionBuffer = [];
+    let collectingFunction = false;
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
         const trimmedLine = line.trim();
 
         // Detect start of blocks to skip
-        if (!skipBlock) {
-            // Skip extension functions (those with $libdir)
+        if (!skipBlock && !collectingFunction) {
+            // Start collecting function definition when we see CREATE FUNCTION
             if (
-                (trimmedLine.startsWith('CREATE FUNCTION') ||
-                    trimmedLine.startsWith('CREATE OR REPLACE FUNCTION')) &&
-                (trimmedLine.includes('$libdir/') || trimmedLine.includes('pgcrypto'))
+                trimmedLine.startsWith('CREATE FUNCTION') ||
+                trimmedLine.startsWith('CREATE OR REPLACE FUNCTION')
             ) {
-                skipBlock = true;
-                blockType = 'extension_function';
+                collectingFunction = true;
+                functionBuffer = [line];
                 continue;
             }
 
@@ -135,42 +134,51 @@ function removePgDumpHeaders(content) {
             }
         }
 
-        // Handle skipping logic
-        if (skipBlock) {
-            if (blockType === 'extension_function') {
-                // Look for end of function (either ; followed by empty line, or ALTER FUNCTION)
-                if (
-                    trimmedLine.endsWith(';') &&
-                    i + 1 < lines.length &&
-                    lines[i + 1].trim() === ''
-                ) {
-                    skipBlock = false;
-                    blockType = '';
-                    continue;
-                }
-                if (trimmedLine.startsWith('ALTER FUNCTION')) {
-                    skipBlock = false;
-                    blockType = '';
-                    continue;
-                }
-                continue;
-            }
+        // Collect function definition until we find the complete statement
+        if (collectingFunction) {
+            functionBuffer.push(line);
 
+            // Check if function definition is complete (ends with ;)
+            if (trimmedLine.endsWith(';')) {
+                const fullFunction = functionBuffer.join('\n');
+
+                // Check if this is an extension function we should skip
+                if (
+                    fullFunction.includes('$libdir/') ||
+                    fullFunction.includes('pgcrypto') ||
+                    fullFunction.includes('LANGUAGE c')
+                ) {
+                    // Skip this extension function
+                    collectingFunction = false;
+                    functionBuffer = [];
+                    continue;
+                } else {
+                    // This is a user function, format it with Navicat style
+                    const formattedFunction = formatUserFunction(fullFunction);
+                    filteredLines.push(...formattedFunction.split('\n'));
+                    collectingFunction = false;
+                    functionBuffer = [];
+                    continue;
+                }
+            }
+            // Continue collecting lines for this function
+            continue;
+        }
+
+        // Handle skipping logic for non-function blocks
+        if (skipBlock) {
             if (blockType === 'function_comment') {
                 // Skip until we find the actual function definition or something else
                 if (
                     trimmedLine.startsWith('CREATE FUNCTION') ||
                     trimmedLine.startsWith('CREATE OR REPLACE FUNCTION')
                 ) {
-                    // Check if this is an extension function we should skip
-                    if (trimmedLine.includes('$libdir/') || trimmedLine.includes('pgcrypto')) {
-                        blockType = 'extension_function';
-                        continue;
-                    } else {
-                        // This is a user function, stop skipping
-                        skipBlock = false;
-                        blockType = '';
-                    }
+                    // Start collecting this function to check if it's an extension function
+                    collectingFunction = true;
+                    functionBuffer = [line];
+                    skipBlock = false;
+                    blockType = '';
+                    continue;
                 } else if (
                     trimmedLine.startsWith('CREATE ') ||
                     trimmedLine.startsWith('-- ') ||
@@ -195,22 +203,77 @@ function removePgDumpHeaders(content) {
     return filteredLines.join('\n');
 }
 
+function formatUserFunction(functionContent) {
+    // Extract function name and arguments from the CREATE FUNCTION statement
+    const lines = functionContent.split('\n');
+    const createLine = lines.find(
+        (line) =>
+            line.trim().startsWith('CREATE FUNCTION') ||
+            line.trim().startsWith('CREATE OR REPLACE FUNCTION')
+    );
+
+    if (!createLine) return functionContent;
+
+    // Extract function signature: function_name(args)
+    const match = createLine.match(
+        /CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+([\w.]+)\s*\(([^)]*)\)/i
+    );
+    if (!match) return functionContent;
+
+    const fullFunctionName = match[1];
+    const functionArgs = match[2].trim();
+    const cleanFunctionName = fullFunctionName.replace('public.', '');
+
+    // Build the argument signature for DROP statement
+    let dropSignature = '';
+    if (functionArgs) {
+        // For DROP FUNCTION, we need just the parameter types, not names
+        const argTypes = functionArgs
+            .split(',')
+            .map((arg) => {
+                const trimmed = arg.trim();
+                // Extract just the type part (after the parameter name)
+                const typeMatch = trimmed.match(/\w+\s+(.+)/);
+                return typeMatch ? typeMatch[1].trim() : trimmed;
+            })
+            .join(', ');
+        dropSignature = `(${argTypes})`;
+    } else {
+        dropSignature = '()';
+    }
+
+    // Format the function with Navicat style
+    const formattedFunction = functionContent
+        .replace(/CREATE\s+FUNCTION/i, 'CREATE OR REPLACE FUNCTION')
+        .replace(/CREATE\s+OR\s+REPLACE\s+FUNCTION/i, 'CREATE OR REPLACE FUNCTION');
+
+    return `-- ----------------------------
+-- Function structure for ${cleanFunctionName}
+-- ----------------------------
+DROP FUNCTION IF EXISTS "${cleanFunctionName}"${dropSignature};
+${formattedFunction}`;
+}
+
 function formatSequencesAndTables(content) {
     // Add proper Navicat-style comments for sequences and tables
     let formatted = content;
 
-    // Format sequence creation
+    // Format sequence creation - handle sequences with or without following ALTER statements
     formatted = formatted.replace(
-        /CREATE SEQUENCE ([\w.]+)\s*\n((?:.*\n)*?)ALTER SEQUENCE/g,
+        /CREATE SEQUENCE ([\w.]+)([^;]*);/g,
         (match, sequenceName, sequenceBody) => {
             const cleanName = sequenceName.replace('public.', '');
+            const bodyLines = sequenceBody.trim().split('\n');
+            const formattedBody = bodyLines
+                .map((line) => line.trim())
+                .filter((line) => line.length > 0)
+                .join('\n');
+
             return `-- ----------------------------
 -- Sequence structure for ${cleanName}
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "${cleanName}";
-CREATE SEQUENCE "${cleanName}" 
-${sequenceBody.trim().replace(/^\s+/gm, '')}
-ALTER SEQUENCE`;
+CREATE SEQUENCE "${cleanName}"${formattedBody ? '\n' + formattedBody : ''};`;
         }
     );
 
