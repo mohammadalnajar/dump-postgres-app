@@ -335,8 +335,8 @@ COMMIT;\n\n`;
                             if (val.match(/^\d+\.\d+$/)) return val;
                             if (val === 't') return 'true';
                             if (val === 'f') return 'false';
-                            // Escape single quotes and wrap in quotes
-                            return `'${val.replace(/'/g, "''")}'`;
+                            // Escape single quotes, and importantly, escape backslashes for JSON
+                            return `'${val.replace(/'/g, "''").replace(/\\/g, '\\\\')}'`;
                         })
                         .join(', ');
 
