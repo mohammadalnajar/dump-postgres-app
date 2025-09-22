@@ -296,6 +296,76 @@ ${tableBody.trim()}
     return formatted;
 }
 
+/**
+ * Properly escape a value for PostgreSQL INSERT statements
+ * Handles JSON strings, regular strings, and maintains proper escaping
+ */
+function escapePostgreSQLValue(val) {
+    if (val === undefined || val === '\\N') return 'NULL';
+    if (val.match(/^\d+$/)) return val; // Integer
+    if (val.match(/^\d+\.\d+$/)) return val; // Decimal
+    if (val === 't') return 'true'; // Boolean true
+    if (val === 'f') return 'false'; // Boolean false
+
+    // For string values, we need to handle PostgreSQL's COPY format escape sequences
+    // and convert them to proper SQL string literals
+    let escaped = val;
+
+    // Handle PostgreSQL COPY format escape sequences
+    // First, handle escaped tabs, newlines, etc.
+    escaped = escaped.replace(/\\t/g, '\t');
+    escaped = escaped.replace(/\\n/g, '\n');
+    escaped = escaped.replace(/\\r/g, '\r');
+
+    // Handle escaped backslashes - PostgreSQL COPY format uses \\ for literal \
+    // We need to convert this to a single backslash first
+    escaped = escaped.replace(/\\\\/g, '\x00TEMP_BACKSLASH\x00'); // Temporary placeholder
+
+    // Handle other escapes
+    escaped = escaped.replace(/\\(.)/g, '$1'); // Remove escape character for other chars
+
+    // Restore the actual backslashes
+    escaped = escaped.replace(/\x00TEMP_BACKSLASH\x00/g, '\\');
+
+    // Now escape for SQL string literal
+    // Double single quotes for SQL
+    escaped = escaped.replace(/'/g, "''");
+
+    // For JSON content, we need to escape backslashes properly for SQL
+    // JSON strings need backslashes to be doubled in SQL string literals
+    if (isLikelyJsonString(escaped)) {
+        // Additional escaping for JSON in SQL string literals
+        escaped = escaped.replace(/\\/g, '\\\\');
+    } else {
+        // For non-JSON strings, still need to escape backslashes for SQL
+        escaped = escaped.replace(/\\/g, '\\\\');
+    }
+
+    return `'${escaped}'`;
+}
+
+/**
+ * Detect if a string is likely a JSON string
+ */
+function isLikelyJsonString(str) {
+    const trimmed = str.trim();
+    // Check for JSON object, array, or string patterns
+    if (
+        (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+        (trimmed.startsWith('[') && trimmed.endsWith(']'))
+    ) {
+        return true;
+    }
+
+    // Also check for complex objects that might have JSON-like content
+    // Look for typical JSON patterns like "key": "value"
+    if (trimmed.includes('"') && trimmed.includes(':')) {
+        return true;
+    }
+
+    return false;
+}
+
 function convertCopyToInserts(content) {
     // Convert COPY statements to INSERT statements with transaction blocks
     let formatted = content;
@@ -321,22 +391,15 @@ COMMIT;\n\n`;
 
             const insertStatements = dataLines
                 .map((line) => {
-                    const rawValues = line.split('\t');
-                    const columnCount = columnNames.length;
+                    // Split by tabs, but we need to be careful about the number of expected columns
+                    const rawValues = parseTabSeparatedLine(line, columnNames.length);
 
                     // Ensure we have the same number of values as columns
-                    // Fill missing values with NULL
-                    const values = Array(columnCount)
+                    const values = Array(columnNames.length)
                         .fill(null)
                         .map((_, index) => {
                             const val = rawValues[index];
-                            if (val === undefined || val === '\\N') return 'NULL';
-                            if (val.match(/^\d+$/)) return val;
-                            if (val.match(/^\d+\.\d+$/)) return val;
-                            if (val === 't') return 'true';
-                            if (val === 'f') return 'false';
-                            // Escape single quotes, and importantly, escape backslashes for JSON
-                            return `'${val.replace(/'/g, "''").replace(/\\/g, '\\\\')}'`;
+                            return escapePostgreSQLValue(val);
                         })
                         .join(', ');
 
@@ -355,6 +418,43 @@ COMMIT;\n\n`;
     );
 
     return formatted;
+}
+
+/**
+ * Parse a tab-separated line while being careful about the expected number of columns
+ * This handles cases where tab characters might appear within the data itself
+ */
+function parseTabSeparatedLine(line, expectedColumns) {
+    const parts = line.split('\t');
+
+    // If we have exactly the expected number of columns, return as-is
+    if (parts.length === expectedColumns) {
+        return parts;
+    }
+
+    // If we have more parts than expected, we need to join some back together
+    // This typically happens when tab characters exist within the data
+    if (parts.length > expectedColumns) {
+        const result = [];
+
+        // Take the first (expectedColumns - 1) parts as-is
+        for (let i = 0; i < expectedColumns - 1; i++) {
+            result.push(parts[i]);
+        }
+
+        // Join the remaining parts for the last column
+        result.push(parts.slice(expectedColumns - 1).join('\t'));
+
+        return result;
+    }
+
+    // If we have fewer parts than expected, pad with undefined
+    const result = [...parts];
+    while (result.length < expectedColumns) {
+        result.push(undefined);
+    }
+
+    return result;
 }
 
 function addNavicatSectionComments(content) {
