@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+    app:
+        build:
+            context: .
+            target: runner # Use the production stage
+        container_name: dump_postgres_app_dev
+        env_file:
+            - .env
+        environment:
+            NODE_ENV: development
+            APP_PORT: ${APP_PORT:-8080}
+        volumes:
+            - ./backups:/app/backups
+            # For development, you might want to mount source for live reload
+            # Uncomment the next line if you implement file watching
+            # - ./src:/app/src:ro
+        ports:
+            - '${APP_PORT:-8080}:8080'
+        restart: unless-stopped
+        # Remove external networks for development
+        networks:
+            - default
+        healthcheck:
+            test: ['CMD-SHELL', 'curl -f http://localhost:8080/health || exit 1']
+            interval: 30s
+            timeout: 10s
+            retries: 3

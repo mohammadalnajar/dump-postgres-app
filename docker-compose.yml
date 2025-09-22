@@ -1,12 +1,70 @@
-version: '3.9'
+version: '3.8'
+
+networks:
+    # Reference the existing shared network for Nginx (optional, for production)
+    proxy:
+        external: true
+        name: proxy # Must match the actual name of your shared network
+
+    # Reference the existing shared network for databases (optional)
+    db_net:
+        external: true
+        name: db_net
+
 services:
+    # dump-postgres-app service
     app:
         build: .
-        container_name: dump-postgres-app
+        container_name: dump_postgres_app
         env_file:
-            - .env
-        ports:
-            - '${APP_PORT:-8080}:8080'
+            - .env # Load variables from .env file
+        environment:
+            # Pass runtime environment variables
+            APP_PORT: ${APP_PORT:-8080}
+            APP_BASE_PATH: ${APP_BASE_PATH:-/}
+            APP_TITLE: ${APP_TITLE:-Postgres Dump App}
+
+            # Security settings
+            BASIC_AUTH_USER: ${BASIC_AUTH_USER}
+            BASIC_AUTH_PASS: ${BASIC_AUTH_PASS}
+            RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
+            RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-20}
+
+            # Default pg_dump options
+            DEFAULT_FORMAT: ${DEFAULT_FORMAT:-plain}
+            DEFAULT_OUTPUT_STYLE: ${DEFAULT_OUTPUT_STYLE:-standard}
+            DEFAULT_INSERT_FORMAT: ${DEFAULT_INSERT_FORMAT:-copy}
+            DEFAULT_INCLUDE_OWNER: ${DEFAULT_INCLUDE_OWNER:-true}
+            DEFAULT_COMPRESS_LEVEL: ${DEFAULT_COMPRESS_LEVEL:-0}
+            DEFAULT_EXCLUDE_SCHEMA: ${DEFAULT_EXCLUDE_SCHEMA}
+            DEFAULT_ONLY_SCHEMA: ${DEFAULT_ONLY_SCHEMA}
+            DEFAULT_ONLY_DATA: ${DEFAULT_ONLY_DATA:-false}
+            DEFAULT_EXTRA_ARGS: ${DEFAULT_EXTRA_ARGS}
+
+            # File retention
+            AUTO_CLEAN_DAYS: ${AUTO_CLEAN_DAYS}
+
+            NODE_ENV: production
         volumes:
             - ./backups:/app/backups
+        networks:
+            # Connect to external networks if available (for production)
+            # Comment these out if running in development
+            - proxy
+            - db_net
+        ports:
+            # For development, expose the port directly
+            # Comment this out in production if using reverse proxy
+            - '${APP_PORT:-8080}:8080'
         restart: unless-stopped
+        healthcheck:
+            test: ['CMD-SHELL', 'curl -f http://localhost:8080/health || exit 1']
+            interval: 30s
+            timeout: 10s
+            retries: 3
+        # Security options
+        security_opt:
+            - no-new-privileges:true
+        read_only: false # Set to true if app doesn't need write access except to volumes
+        tmpfs:
+            - /tmp:noexec,nosuid,size=1024m

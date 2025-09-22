@@ -1,0 +1,17 @@
+version: '3.8'
+
+# Production override - use this when deploying with external networks
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+    app:
+        # Remove port mapping when using reverse proxy
+        ports: []
+        networks:
+            - proxy
+            - db_net
+        environment:
+            # Additional production-specific environment variables
+            NODE_ENV: production
+            # Disable direct port access logs in production
+            NO_PORT_LOGS: 'true'

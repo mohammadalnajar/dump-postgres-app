@@ -104,6 +104,8 @@ dump-postgres-app/
 
 ## Quick Start (Docker)
 
+### For Development
+
 1) **Clone & configure**
 
 ```bash
@@ -112,19 +114,134 @@ cp .env.example .env
 # APP_PORT, and any DEFAULT_* options you prefer.
 ```
 
-2) **Build & run**
+2) **Build & run development environment**
 
 ```bash
-docker compose up -d --build
+# Using Makefile (recommended)
+make dev
+
+# Or using docker compose directly
+docker compose -f docker-compose.dev.yml up -d --build
 ```
 
 3) **Open the app**
 
 ```
-http://YOUR_SERVER_IP:8080
+http://localhost:8080
+```
+
+### For Production (standalone)
+
+1) **Build & run production environment**
+
+```bash
+# Using Makefile (recommended)
+make prod
+
+# Or using docker compose directly
+docker compose up -d --build
+```
+
+### For Production (with external networks/reverse proxy)
+
+1) **Ensure external networks exist**
+
+```bash
+docker network create proxy
+docker network create db_net
+```
+
+2) **Build & run with external networks**
+
+```bash
+# Using Makefile (recommended)
+make prod-net
+
+# Or using docker compose directly
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+
+> When using external networks, the app won't expose ports directly and expects to be accessed via a reverse proxy (like Nginx) on the `proxy` network.
+
+### Makefile Commands
+
+The project includes a comprehensive Makefile for easy management:
+
+```bash
+# Development
+make dev                 # Build and start development environment
+make build-dev          # Build development image only
+make up-dev             # Start development containers
+make down-dev           # Stop development containers
+make logs-dev           # View development logs
+
+# Production (standalone)
+make prod               # Build and start production environment
+make build-prod         # Build production image only
+make up-prod            # Start production containers
+make down-prod          # Stop production containers
+make logs               # View production logs
+
+# Production (with external networks)
+make prod-net           # Build and start production with external networks
+make build-prod-net     # Build production image with networks
+make up-prod-net        # Start production containers with networks
+make down-prod-net      # Stop production containers with networks
+
+# Utilities
+make ps                 # Show running containers
+make status             # Show container status
+make health-dev         # Check development container health
+make health-prod        # Check production container health
+make backup-list        # List current backup files
+make backup-clean       # Clean old backup files (>7 days)
+make clean              # Remove containers and clean system
+make clean-volumes      # Remove volumes (with confirmation)
 ```
 
 If you configured Basic Auth, your browser will prompt for credentials.
+
+---
+
+## Docker Configuration
+
+The project now includes multiple Docker Compose configurations for different environments:
+
+### Files Overview
+
+- **`Dockerfile`**: Multi-stage build with optimized production image
+- **`docker-compose.yml`**: Main production configuration
+- **`docker-compose.dev.yml`**: Development-specific overrides
+- **`docker-compose.prod.yml`**: Production overrides for external networks
+- **`.dockerignore`**: Optimized build context
+- **`Makefile`**: Management commands for all environments
+
+### Key Features
+
+- **Multi-stage Docker build** for optimized images
+- **Health checks** for container monitoring
+- **Security improvements** with non-root user
+- **External network support** for reverse proxy setups
+- **Development and production configurations**
+- **Automatic backup directory creation**
+- **Resource optimization** with proper caching
+
+### Health Endpoint
+
+The application now includes a health check endpoint at `/health`:
+
+```bash
+curl http://localhost:8080/health
+```
+
+Response:
+```json
+{
+  "status": "healthy",
+  "timestamp": "2025-09-23T10:30:00.000Z",
+  "service": "dump-postgres-app"
+}
+```
 
 ---
 
@@ -333,7 +450,30 @@ server {
 
 ---
 
-## Development (optional)
+## Development
+
+### Option 1: Docker Development (Recommended)
+
+Use the development Docker environment for a consistent setup:
+
+```bash
+# Start development environment
+make dev
+
+# View logs
+make logs-dev
+
+# Stop when done
+make down-dev
+```
+
+The development configuration includes:
+- Hot reload capabilities (if you mount source volumes)
+- Development-optimized settings
+- Direct port access
+- Simplified networking
+
+### Option 2: Local Development
 
 Run locally (requires Node 18+ and Postgres client installed):
 
@@ -342,6 +482,8 @@ npm ci
 npm run dev
 # open http://localhost:8080
 ```
+
+> **Note**: For local development, you'll need to install PostgreSQL client tools to have `pg_dump` available.
 
 ---
 

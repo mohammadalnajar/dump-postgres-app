@@ -226,6 +226,15 @@ app.post('/delete/:name', (req, res) => {
     res.redirect('/');
 });
 
+// Health check endpoint for Docker
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        service: 'dump-postgres-app'
+    });
+});
+
 app.listen(PORT, () => {
     console.log(`Simple PG Backup running on :${PORT}${BASE}`);
 });
