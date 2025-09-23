@@ -113,8 +113,75 @@ th {
 .actions button {
     margin-right: 0.4rem;
 }
+/* Cron job specific styles */
+.status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-enabled {
+    background: #10b981;
+    color: white;
+}
+
+.status-disabled {
+    background: #6b7280;
+    color: white;
+}
+
+.status-success {
+    color: #10b981;
+}
+
+.status-error {
+    color: #ef4444;
+}
+
+.btn-small {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+    margin-right: 0.25rem;
+}
+
+.btn-danger {
+    background: #dc2626;
+    border-color: #dc2626;
+}
+
+.btn-danger:hover {
+    background: #b91c1c;
+    border-color: #b91c1c;
+}
+
+/* Custom cron pattern styling */
+input[name='cronPattern'] {
+    font-family: monospace;
+}
+
+#cronDescription {
+    font-size: 0.85rem;
+    padding: 0.5rem;
+    border-radius: 4px;
+    background: #1e293b;
+    border: 1px solid #374151;
+}
+
+/* Responsive adjustments */
 @media (max-width: 720px) {
     .grid {
         grid-template-columns: 1fr;
+    }
+
+    .actions {
+        white-space: nowrap;
+    }
+
+    .actions form {
+        display: block;
+        margin-bottom: 0.25rem;
     }
 }

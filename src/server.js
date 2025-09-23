@@ -18,6 +18,17 @@ import {
     verifyCredentials,
     getAuthCredentials
 } from './lib/auth.js';
+import {
+    initializeCronManager,
+    getAllCronJobs,
+    getCronJob,
+    createCronJob,
+    updateCronJob,
+    deleteCronJob,
+    isValidCronPattern,
+    describeCronPattern,
+    getPredefinedPatterns
+} from './lib/cronManager.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -28,6 +39,9 @@ const TITLE = process.env.APP_TITLE || 'Simple Postgres Backup';
 
 const BACKUP_DIR = path.join(__dirname, '..', 'backups');
 ensureDir(BACKUP_DIR);
+
+// Initialize cron manager
+initializeCronManager();
 
 // Helmet (with minimal CSP so EJS works fine)
 app.use(
@@ -172,6 +186,7 @@ if (AUTO_CLEAN_DAYS > 0) {
 // Home: show form + backup list
 app.get('/', USE_SESSION_AUTH ? requireAuth : (req, res, next) => next(), (req, res) => {
     const files = listBackups(BACKUP_DIR);
+    const cronJobs = getAllCronJobs();
 
     // Get message from query parameters
     let message = null;
@@ -184,7 +199,9 @@ app.get('/', USE_SESSION_AUTH ? requireAuth : (req, res, next) => next(), (req, 
     res.render('index', {
         title: TITLE,
         files,
+        cronJobs,
         message,
+        predefinedPatterns: getPredefinedPatterns(),
         defaults: {
             format: process.env.DEFAULT_FORMAT || 'plain',
             outputStyle: process.env.DEFAULT_OUTPUT_STYLE || 'standard',
@@ -203,6 +220,147 @@ app.get('/', USE_SESSION_AUTH ? requireAuth : (req, res, next) => next(), (req, 
         }
     });
 });
+
+// Cron Jobs Management Routes
+
+// Get all cron jobs (API endpoint)
+app.get(
+    '/api/cron-jobs',
+    USE_SESSION_AUTH ? requireAuth : (req, res, next) => next(),
+    (req, res) => {
+        const jobs = getAllCronJobs();
+        res.json(jobs);
+    }
+);
+
+// Create cron job
+app.post(
+    '/cron-jobs',
+    USE_SESSION_AUTH ? requireAuth : (req, res, next) => next(),
+    async (req, res) => {
+        try {
+            const jobName = requireStr(req.body.jobName, 'Job Name');
+            let cronPattern = req.body.cronPattern;
+
+            // Handle predefined patterns
+            if (req.body.cronPreset && req.body.cronPreset !== 'custom') {
+                cronPattern = req.body.cronPreset;
+            }
+
+            if (!cronPattern) {
+                throw new Error('Cron pattern is required');
+            }
+
+            if (!isValidCronPattern(cronPattern)) {
+                throw new Error('Invalid cron pattern');
+            }
+
+            // Build backup configuration from form data
+            const config = {
+                host: requireStr(req.body.host, 'Host'),
+                db: requireStr(req.body.db, 'Database'),
+                user: requireStr(req.body.user, 'User'),
+                password: requireStr(req.body.password, 'Password'),
+                port: optionalInt(req.body.port, 1, 65535) ?? 5432,
+                format: enumOf(
+                    req.body.format || 'plain',
+                    ['plain', 'custom', 'tar', 'directory'],
+                    'plain'
+                ),
+                outputStyle: enumOf(
+                    req.body.outputStyle || 'standard',
+                    ['standard', 'navicat'],
+                    'standard'
+                ),
+                insertFormat: enumOf(req.body.insertFormat || 'copy', ['copy', 'inserts'], 'copy'),
+                includeOwner:
+                    req.body.includeOwner === '' ? undefined : optionalBool(req.body.includeOwner),
+                onlySchema: (req.body.onlySchema || '').trim(),
+                onlyData: optionalBool(req.body.onlyData) ?? false,
+                excludeSchema: (req.body.excludeSchema || '').trim(),
+                compressLevel: optionalInt(req.body.compressLevel, 0, 9) ?? 0,
+                extraArgs: (req.body.extraArgs || '').trim()
+            };
+
+            const job = createCronJob({
+                name: jobName,
+                cronPattern,
+                config,
+                enabled: true
+            });
+
+            res.redirect(
+                '/?message=' + encodeURIComponent(`Cron job "${jobName}" created successfully`)
+            );
+        } catch (error) {
+            console.error('Create cron job error:', error);
+            res.redirect('/?error=' + encodeURIComponent(error.message || String(error)));
+        }
+    }
+);
+
+// Delete cron job
+app.post(
+    '/cron-jobs/:id/delete',
+    USE_SESSION_AUTH ? requireAuth : (req, res, next) => next(),
+    (req, res) => {
+        try {
+            const jobId = req.params.id;
+            const job = getCronJob(jobId);
+
+            if (!job) {
+                return res.redirect('/?error=' + encodeURIComponent('Cron job not found'));
+            }
+
+            deleteCronJob(jobId);
+            res.redirect(
+                '/?message=' + encodeURIComponent(`Cron job "${job.name}" deleted successfully`)
+            );
+        } catch (error) {
+            console.error('Delete cron job error:', error);
+            res.redirect('/?error=' + encodeURIComponent(error.message || String(error)));
+        }
+    }
+);
+
+// Toggle cron job enabled/disabled
+app.post(
+    '/cron-jobs/:id/toggle',
+    USE_SESSION_AUTH ? requireAuth : (req, res, next) => next(),
+    (req, res) => {
+        try {
+            const jobId = req.params.id;
+            const job = getCronJob(jobId);
+
+            if (!job) {
+                return res.redirect('/?error=' + encodeURIComponent('Cron job not found'));
+            }
+
+            const updatedJob = updateCronJob(jobId, { enabled: !job.enabled });
+            const status = updatedJob.enabled ? 'enabled' : 'disabled';
+
+            res.redirect(
+                '/?message=' + encodeURIComponent(`Cron job "${job.name}" ${status} successfully`)
+            );
+        } catch (error) {
+            console.error('Toggle cron job error:', error);
+            res.redirect('/?error=' + encodeURIComponent(error.message || String(error)));
+        }
+    }
+);
+
+// API endpoint to validate cron pattern
+app.post(
+    '/api/validate-cron',
+    USE_SESSION_AUTH ? requireAuth : (req, res, next) => next(),
+    (req, res) => {
+        const { pattern } = req.body;
+        const isValid = isValidCronPattern(pattern);
+        const description = isValid ? describeCronPattern(pattern) : 'Invalid pattern';
+
+        res.json({ valid: isValid, description });
+    }
+);
 
 // Create backup
 app.post(

@@ -21,6 +21,28 @@
         </div>
 
         <form method="POST" action="/backup">
+            <!-- Cron Job Configuration -->
+            <fieldset id="cronJobSection" style="display: none;">
+                <legend>Schedule Backup Job</legend>
+                <div class="grid">
+                    <label>Job Name <input name="jobName" placeholder="My backup job" /></label>
+                    <label>Schedule
+                        <select name="cronPreset" id="cronPreset">
+                            <% predefinedPatterns.forEach(pattern => { %>
+                            <option value="<%= pattern.value %>"><%= pattern.label %></option>
+                            <% }) %>
+                        </select>
+                    </label>
+                </div>
+                <div id="customCronPattern" style="display: none;">
+                    <label>Custom Cron Pattern
+                        <input name="cronPattern" placeholder="0 0 * * *" />
+                        <small>Format: minute hour day month weekday</small>
+                    </label>
+                    <div id="cronDescription" style="margin-top: 0.5rem; color: #666; font-size: 0.9rem;"></div>
+                </div>
+            </fieldset>
+
             <fieldset>
                 <legend>Connection</legend>
                 <div class="grid">
@@ -95,7 +117,18 @@
                 </div>
             </fieldset>
 
-            <button type="submit">Create Backup</button>
+            <fieldset>
+                <legend>Actions</legend>
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" id="enableCronJob" />
+                        Schedule as cron job
+                    </label>
+                </div>
+                <div style="margin-top: 1rem;">
+                    <button type="submit" id="submitBtn">Create Backup</button>
+                </div>
+            </fieldset>
         </form>
 
         <% if (message) { %>
@@ -131,6 +164,73 @@
                 </tbody>
             </table>
         </section>
+
+        <section>
+            <h2>Scheduled Backup Jobs</h2>
+            <% if (cronJobs && cronJobs.length > 0) { %>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Schedule</th>
+                        <th>Database</th>
+                        <th>Status</th>
+                        <th>Last Run</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% cronJobs.forEach(job => { %>
+                    <tr>
+                        <td><%= job.name %></td>
+                        <td>
+                            <code><%= job.cronPattern %></code>
+                            <br><small style="color: #666;"><%= job.cronPattern === '0 * * * *' ? 'Every hour' : 
+                                job.cronPattern === '0 0 * * *' ? 'Daily at midnight' :
+                                job.cronPattern === '*/5 * * * *' ? 'Every 5 minutes' :
+                                job.cronPattern === '*/10 * * * *' ? 'Every 10 minutes' :
+                                job.cronPattern === '*/30 * * * *' ? 'Every 30 minutes' :
+                                job.cronPattern === '0 */6 * * *' ? 'Every 6 hours' :
+                                job.cronPattern === '0 0 * * 0' ? 'Weekly on Sunday' :
+                                job.cronPattern === '0 0 1 * *' ? 'Monthly' :
+                                'Custom pattern' %></small>
+                        </td>
+                        <td><%= job.config.db %>@<%= job.config.host %></td>
+                        <td>
+                            <span class="status-badge status-<%= job.enabled ? 'enabled' : 'disabled' %>">
+                                <%= job.enabled ? 'Enabled' : 'Disabled' %>
+                            </span>
+                        </td>
+                        <td>
+                            <% if (job.lastRun) { %>
+                                <%= new Date(job.lastRun).toLocaleString() %>
+                                <br><small class="status-<%= job.lastStatus %>">
+                                    <%= job.lastStatus === 'success' ? '✓' : '✗' %> <%= job.lastStatus %>
+                                </small>
+                            <% } else { %>
+                                <em>Never</em>
+                            <% } %>
+                        </td>
+                        <td class="actions">
+                            <form method="POST" action="/cron-jobs/<%= job.id %>/toggle" style="display:inline">
+                                <button type="submit" class="btn-small">
+                                    <%= job.enabled ? 'Disable' : 'Enable' %>
+                                </button>
+                            </form>
+                            <form method="POST" action="/cron-jobs/<%= job.id %>/delete" 
+                                  style="display:inline" 
+                                  onsubmit="return confirm('Delete this cron job?')">
+                                <button type="submit" class="btn-small btn-danger">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+            <% } else { %>
+            <p>No scheduled backup jobs configured. Create a backup with "Schedule as cron job" enabled to add one.</p>
+            <% } %>
+        </section>
     </main>
 
     <script>
@@ -154,10 +254,95 @@
             }
         }
 
+        // Handle cron job checkbox
+        function toggleCronJobSection() {
+            console.log('toggleCronJobSection called');
+            const checkbox = document.getElementById('enableCronJob');
+            const cronSection = document.getElementById('cronJobSection');
+            const submitBtn = document.getElementById('submitBtn');
+            const form = document.querySelector('form');
+            
+            if (checkbox.checked) {
+                cronSection.style.display = 'block';
+                submitBtn.textContent = 'Create Scheduled Backup Job';
+                form.action = '/cron-jobs';
+                // Make cron job fields required
+                document.querySelector('input[name="jobName"]').required = true;
+            } else {
+                cronSection.style.display = 'none';
+                submitBtn.textContent = 'Create Backup';
+                form.action = '/backup';
+                // Remove required from cron job fields
+                document.querySelector('input[name="jobName"]').required = false;
+            }
+        }
+
+        // Handle cron preset selection
+        function toggleCustomCronPattern() {
+            const preset = document.getElementById('cronPreset').value;
+            const customSection = document.getElementById('customCronPattern');
+            
+            if (preset === 'custom') {
+                customSection.style.display = 'block';
+                document.querySelector('input[name="cronPattern"]').required = true;
+            } else {
+                customSection.style.display = 'none';
+                document.querySelector('input[name="cronPattern"]').required = false;
+            }
+        }
+
+        // Validate and describe custom cron pattern
+        async function validateCronPattern() {
+            const patternInput = document.querySelector('input[name="cronPattern"]');
+            const descriptionDiv = document.getElementById('cronDescription');
+            const pattern = patternInput.value.trim();
+            
+            if (!pattern) {
+                descriptionDiv.textContent = '';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/validate-cron', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ pattern })
+                });
+                
+                const result = await response.json();
+                
+                if (result.valid) {
+                    descriptionDiv.innerHTML = `<span style="color: green;">✓ ${result.description}</span>`;
+                    patternInput.style.borderColor = 'green';
+                } else {
+                    descriptionDiv.innerHTML = `<span style="color: red;">✗ ${result.description}</span>`;
+                    patternInput.style.borderColor = 'red';
+                }
+            } catch (error) {
+                descriptionDiv.innerHTML = `<span style="color: orange;">Unable to validate pattern</span>`;
+            }
+        }
+        console.log(document.getElementById('enableCronJob'), "document.getElementById('enableCronJob')");
+        // Event listeners
         document.getElementById('outputStyle').addEventListener('change', toggleFormatOptions);
+        document.getElementById('enableCronJob').addEventListener('change', toggleCronJobSection);
+        document.getElementById('cronPreset').addEventListener('change', toggleCustomCronPattern);
+        
+        // Debounced validation for custom cron pattern
+        let cronValidationTimeout;
+        document.querySelector('input[name="cronPattern"]').addEventListener('input', function() {
+            clearTimeout(cronValidationTimeout);
+            cronValidationTimeout = setTimeout(validateCronPattern, 500);
+        });
         
         // Initialize on page load
-        document.addEventListener('DOMContentLoaded', toggleFormatOptions);
+        document.addEventListener('DOMContentLoaded', function() {
+            toggleFormatOptions();
+            toggleCronJobSection();
+            toggleCustomCronPattern();
+        });
     </script>
 </body>
 
