@@ -261,19 +261,35 @@
             const cronSection = document.getElementById('cronJobSection');
             const submitBtn = document.getElementById('submitBtn');
             const form = document.querySelector('form');
+            const jobNameInput = document.querySelector('input[name="jobName"]');
+            
+            console.log('Checkbox element:', checkbox);
+            console.log('Checkbox checked:', checkbox ? checkbox.checked : 'null');
+            console.log('Cron section:', cronSection);
+            
+            if (!checkbox || !cronSection || !submitBtn || !form) {
+                console.error('Missing required elements for cron job toggle');
+                return;
+            }
             
             if (checkbox.checked) {
+                console.log('Showing cron job section');
                 cronSection.style.display = 'block';
                 submitBtn.textContent = 'Create Scheduled Backup Job';
                 form.action = '/cron-jobs';
                 // Make cron job fields required
-                document.querySelector('input[name="jobName"]').required = true;
+                if (jobNameInput) {
+                    jobNameInput.required = true;
+                }
             } else {
+                console.log('Hiding cron job section');
                 cronSection.style.display = 'none';
                 submitBtn.textContent = 'Create Backup';
                 form.action = '/backup';
                 // Remove required from cron job fields
-                document.querySelector('input[name="jobName"]').required = false;
+                if (jobNameInput) {
+                    jobNameInput.required = false;
+                }
             }
         }
 
@@ -324,21 +340,46 @@
                 descriptionDiv.innerHTML = `<span style="color: orange;">Unable to validate pattern</span>`;
             }
         }
-        console.log(document.getElementById('enableCronJob'), "document.getElementById('enableCronJob')");
-        // Event listeners
-        document.getElementById('outputStyle').addEventListener('change', toggleFormatOptions);
-        document.getElementById('enableCronJob').addEventListener('change', toggleCronJobSection);
-        document.getElementById('cronPreset').addEventListener('change', toggleCustomCronPattern);
-        
-        // Debounced validation for custom cron pattern
-        let cronValidationTimeout;
-        document.querySelector('input[name="cronPattern"]').addEventListener('input', function() {
-            clearTimeout(cronValidationTimeout);
-            cronValidationTimeout = setTimeout(validateCronPattern, 500);
-        });
-        
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM Content Loaded');
+            
+            // Check if elements exist
+            const enableCronJob = document.getElementById('enableCronJob');
+            const outputStyle = document.getElementById('outputStyle');
+            const cronPreset = document.getElementById('cronPreset');
+            const cronPatternInput = document.querySelector('input[name="cronPattern"]');
+            
+            console.log('enableCronJob element:', enableCronJob);
+            console.log('outputStyle element:', outputStyle);
+            console.log('cronPreset element:', cronPreset);
+            
+            // Add event listeners only if elements exist
+            if (outputStyle) {
+                outputStyle.addEventListener('change', toggleFormatOptions);
+            }
+            
+            if (enableCronJob) {
+                enableCronJob.addEventListener('change', function() {
+                    console.log('Checkbox changed, checked:', this.checked);
+                    toggleCronJobSection();
+                });
+            }
+            
+            if (cronPreset) {
+                cronPreset.addEventListener('change', toggleCustomCronPattern);
+            }
+            
+            // Debounced validation for custom cron pattern
+            if (cronPatternInput) {
+                let cronValidationTimeout;
+                cronPatternInput.addEventListener('input', function() {
+                    clearTimeout(cronValidationTimeout);
+                    cronValidationTimeout = setTimeout(validateCronPattern, 500);
+                });
+            }
+            
+            // Initialize states
             toggleFormatOptions();
             toggleCronJobSection();
             toggleCustomCronPattern();
