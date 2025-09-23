@@ -20,7 +20,7 @@
             </form>
         </div>
 
-        <form method="POST" action="/backup">
+        <form method="POST" action="/backup" id="backupForm">
             <!-- Cron Job Configuration -->
             <fieldset id="cronJobSection" style="display: none;">
                 <legend>Schedule Backup Job</legend>
@@ -260,12 +260,14 @@
             const checkbox = document.getElementById('enableCronJob');
             const cronSection = document.getElementById('cronJobSection');
             const submitBtn = document.getElementById('submitBtn');
-            const form = document.querySelector('form');
+            const form = document.getElementById('backupForm'); // Use specific form ID
             const jobNameInput = document.querySelector('input[name="jobName"]');
             
             console.log('Checkbox element:', checkbox);
             console.log('Checkbox checked:', checkbox ? checkbox.checked : 'null');
             console.log('Cron section:', cronSection);
+            console.log('Form element:', form);
+            console.log('Current form action:', form ? form.action : 'null');
             
             if (!checkbox || !cronSection || !submitBtn || !form) {
                 console.error('Missing required elements for cron job toggle');
@@ -277,6 +279,7 @@
                 cronSection.style.display = 'block';
                 submitBtn.textContent = 'Create Scheduled Backup Job';
                 form.action = '/cron-jobs';
+                console.log('Form action changed to:', form.action);
                 // Make cron job fields required
                 if (jobNameInput) {
                     jobNameInput.required = true;
@@ -286,6 +289,7 @@
                 cronSection.style.display = 'none';
                 submitBtn.textContent = 'Create Backup';
                 form.action = '/backup';
+                console.log('Form action changed to:', form.action);
                 // Remove required from cron job fields
                 if (jobNameInput) {
                     jobNameInput.required = false;
@@ -376,6 +380,17 @@
                 cronPatternInput.addEventListener('input', function() {
                     clearTimeout(cronValidationTimeout);
                     cronValidationTimeout = setTimeout(validateCronPattern, 500);
+                });
+            }
+            
+            // Add form submission debugging
+            const backupForm = document.getElementById('backupForm');
+            if (backupForm) {
+                backupForm.addEventListener('submit', function(e) {
+                    console.log('Form submitted!');
+                    console.log('Form action:', this.action);
+                    console.log('Checkbox checked:', document.getElementById('enableCronJob').checked);
+                    // Don't prevent default, let form submit normally
                 });
             }
             

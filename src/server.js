@@ -50,7 +50,7 @@ app.use(
             useDefaults: true,
             directives: {
                 'img-src': ["'self'"],
-                'script-src': ["'self'"],
+                'script-src': ["'self'", "'unsafe-inline'"],
                 'style-src': ["'self'", "'unsafe-inline'"]
             }
         }
