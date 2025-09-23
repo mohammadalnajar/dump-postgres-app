@@ -4,12 +4,19 @@ import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import morgan from 'morgan';
 import basicAuth from 'basic-auth';
+import session from 'express-session';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { buildPgDumpArgs, runPgDump, extensionFor, listBackups, ensureDir } from './lib/pgdump.js';
 import { requireStr, optionalBool, optionalInt, enumOf } from './lib/validate.js';
 import { sanitizeName, timestamp } from './lib/sanitize.js';
+import {
+    requireAuth,
+    redirectIfAuthenticated,
+    verifyCredentials,
+    getAuthCredentials
+} from './lib/auth.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -39,6 +46,20 @@ app.use(compression());
 app.use(express.urlencoded({ extended: false, limit: '100kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Session configuration
+app.use(
+    session({
+        secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
+        resave: false,
+        saveUninitialized: false,
+        cookie: {
+            secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+            httpOnly: true,
+            maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        }
+    })
+);
+
 // Rate limit
 const limiter = rateLimit({
     windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS || 60000),
@@ -48,10 +69,21 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// Optional Basic Auth
+// Authentication middleware
+const USE_SESSION_AUTH = process.env.USE_SESSION_AUTH !== 'false'; // Default to true
 const BA_USER = process.env.BASIC_AUTH_USER;
 const BA_PASS = process.env.BASIC_AUTH_PASS;
-if (BA_USER && BA_PASS) {
+
+if (USE_SESSION_AUTH) {
+    // Use new session-based authentication
+    console.log('Using session-based authentication');
+    const { username } = getAuthCredentials();
+    console.log(
+        `Default username: ${username} (change AUTH_USERNAME and AUTH_PASSWORD environment variables)`
+    );
+} else if (BA_USER && BA_PASS) {
+    // Fallback to basic auth for backward compatibility
+    console.log('Using basic authentication (legacy mode)');
     app.use((req, res, next) => {
         const creds = basicAuth(req);
         if (!creds || creds.name !== BA_USER || creds.pass !== BA_PASS) {
@@ -65,6 +97,52 @@ if (BA_USER && BA_PASS) {
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(morgan('tiny'));
+
+// Authentication routes (only if using session auth)
+if (USE_SESSION_AUTH) {
+    // Login page
+    app.get('/login', redirectIfAuthenticated, (req, res) => {
+        res.render('login', {
+            title: TITLE,
+            error: req.query.error || null,
+            username: req.query.username || ''
+        });
+    });
+
+    // Login form submission
+    app.post('/login', redirectIfAuthenticated, (req, res) => {
+        const { username, password } = req.body;
+
+        if (!username || !password) {
+            return res.redirect(
+                '/login?error=' + encodeURIComponent('Username and password are required')
+            );
+        }
+
+        if (verifyCredentials(username, password)) {
+            req.session.authenticated = true;
+            req.session.username = username;
+            res.redirect('/');
+        } else {
+            res.redirect(
+                '/login?error=' +
+                    encodeURIComponent('Invalid username or password') +
+                    '&username=' +
+                    encodeURIComponent(username)
+            );
+        }
+    });
+
+    // Logout
+    app.post('/logout', (req, res) => {
+        req.session.destroy((err) => {
+            if (err) {
+                console.error('Error destroying session:', err);
+            }
+            res.redirect('/login');
+        });
+    });
+}
 
 // Auto-clean old files (optional)
 const AUTO_CLEAN_DAYS = Number(process.env.AUTO_CLEAN_DAYS || 0);
@@ -82,7 +160,7 @@ if (AUTO_CLEAN_DAYS > 0) {
 }
 
 // Home: show form + backup list
-app.get('/', (req, res) => {
+app.get('/', USE_SESSION_AUTH ? requireAuth : (req, res, next) => next(), (req, res) => {
     const files = listBackups(BACKUP_DIR);
 
     // Get message from query parameters
@@ -117,114 +195,126 @@ app.get('/', (req, res) => {
 });
 
 // Create backup
-app.post('/backup', async (req, res) => {
-    try {
-        const host = requireStr(req.body.host, 'Host');
-        const db = requireStr(req.body.db, 'Database');
-        const user = requireStr(req.body.user, 'User');
-        const password = requireStr(req.body.password, 'Password');
-        const port = optionalInt(req.body.port, 1, 65535) ?? 5432;
+app.post(
+    '/backup',
+    USE_SESSION_AUTH ? requireAuth : (req, res, next) => next(),
+    async (req, res) => {
+        try {
+            const host = requireStr(req.body.host, 'Host');
+            const db = requireStr(req.body.db, 'Database');
+            const user = requireStr(req.body.user, 'User');
+            const password = requireStr(req.body.password, 'Password');
+            const port = optionalInt(req.body.port, 1, 65535) ?? 5432;
 
-        const format = enumOf(
-            req.body.format || process.env.DEFAULT_FORMAT || 'plain',
-            ['plain', 'custom', 'tar', 'directory'],
-            'plain'
-        );
+            const format = enumOf(
+                req.body.format || process.env.DEFAULT_FORMAT || 'plain',
+                ['plain', 'custom', 'tar', 'directory'],
+                'plain'
+            );
 
-        const outputStyle = enumOf(
-            req.body.outputStyle || process.env.DEFAULT_OUTPUT_STYLE || 'standard',
-            ['standard', 'navicat'],
-            'standard'
-        );
+            const outputStyle = enumOf(
+                req.body.outputStyle || process.env.DEFAULT_OUTPUT_STYLE || 'standard',
+                ['standard', 'navicat'],
+                'standard'
+            );
 
-        const insertFormat = enumOf(
-            req.body.insertFormat || process.env.DEFAULT_INSERT_FORMAT || 'copy',
-            ['copy', 'inserts'],
-            'copy'
-        );
+            const insertFormat = enumOf(
+                req.body.insertFormat || process.env.DEFAULT_INSERT_FORMAT || 'copy',
+                ['copy', 'inserts'],
+                'copy'
+            );
 
-        const includeOwnerVal = req.body.includeOwner;
-        const includeOwner = includeOwnerVal === '' ? undefined : optionalBool(includeOwnerVal);
+            const includeOwnerVal = req.body.includeOwner;
+            const includeOwner = includeOwnerVal === '' ? undefined : optionalBool(includeOwnerVal);
 
-        const onlySchema =
-            (req.body.onlySchema || '').trim() || process.env.DEFAULT_ONLY_SCHEMA || '';
-        const onlyData =
-            optionalBool(req.body.onlyData) ?? process.env.DEFAULT_ONLY_DATA === 'true';
-        const excludeSchema =
-            (req.body.excludeSchema || '').trim() || process.env.DEFAULT_EXCLUDE_SCHEMA || '';
+            const onlySchema =
+                (req.body.onlySchema || '').trim() || process.env.DEFAULT_ONLY_SCHEMA || '';
+            const onlyData =
+                optionalBool(req.body.onlyData) ?? process.env.DEFAULT_ONLY_DATA === 'true';
+            const excludeSchema =
+                (req.body.excludeSchema || '').trim() || process.env.DEFAULT_EXCLUDE_SCHEMA || '';
 
-        const compressLevel =
-            optionalInt(req.body.compressLevel, 0, 9) ??
-            Number(process.env.DEFAULT_COMPRESS_LEVEL || 0);
+            const compressLevel =
+                optionalInt(req.body.compressLevel, 0, 9) ??
+                Number(process.env.DEFAULT_COMPRESS_LEVEL || 0);
 
-        const extraArgs = (req.body.extraArgs || process.env.DEFAULT_EXTRA_ARGS || '').trim();
+            const extraArgs = (req.body.extraArgs || process.env.DEFAULT_EXTRA_ARGS || '').trim();
 
-        // Compute filename
-        const safeDb = sanitizeName(db);
-        const stamp = timestamp();
-        const ext = extensionFor(format, outputStyle);
-        const baseName = `${safeDb}_${stamp}${ext || ''}`;
-        const outPath = path.join(BACKUP_DIR, baseName);
+            // Compute filename
+            const safeDb = sanitizeName(db);
+            const stamp = timestamp();
+            const ext = extensionFor(format, outputStyle);
+            const baseName = `${safeDb}_${stamp}${ext || ''}`;
+            const outPath = path.join(BACKUP_DIR, baseName);
 
-        // Build args
-        const args = buildPgDumpArgs({
-            host,
-            port,
-            user,
-            db,
-            includeOwner,
-            format,
-            compressLevel,
-            onlySchema,
-            onlyData,
-            excludeSchema,
-            extraArgs,
-            password,
-            outputStyle,
-            insertFormat
-        });
+            // Build args
+            const args = buildPgDumpArgs({
+                host,
+                port,
+                user,
+                db,
+                includeOwner,
+                format,
+                compressLevel,
+                onlySchema,
+                onlyData,
+                excludeSchema,
+                extraArgs,
+                password,
+                outputStyle,
+                insertFormat
+            });
 
-        // If directory format, outPath must be a directory
-        if (format === 'directory') {
-            fs.mkdirSync(outPath, { recursive: true });
-            // for directory format, pg_dump needs -F d -f <dir>
-            // we pass -f via runPgDump (non-plain branch)
+            // If directory format, outPath must be a directory
+            if (format === 'directory') {
+                fs.mkdirSync(outPath, { recursive: true });
+                // for directory format, pg_dump needs -F d -f <dir>
+                // we pass -f via runPgDump (non-plain branch)
+            }
+
+            await runPgDump({
+                args,
+                envPassword: password,
+                outputPath: outPath,
+                format,
+                outputStyle,
+                connectionOptions: { host, port, db }
+            });
+
+            // Redirect to home page with success message
+            return res.redirect('/?message=' + encodeURIComponent(`Backup created: ${baseName}`));
+        } catch (err) {
+            console.error('Backup error:', err);
+            // Redirect to home page with error message
+            return res.redirect('/?error=' + encodeURIComponent(err.message || String(err)));
         }
-
-        await runPgDump({
-            args,
-            envPassword: password,
-            outputPath: outPath,
-            format,
-            outputStyle,
-            connectionOptions: { host, port, db }
-        });
-
-        // Redirect to home page with success message
-        return res.redirect('/?message=' + encodeURIComponent(`Backup created: ${baseName}`));
-    } catch (err) {
-        console.error('Backup error:', err);
-        // Redirect to home page with error message
-        return res.redirect('/?error=' + encodeURIComponent(err.message || String(err)));
     }
-});
+);
 
 // Download backup
-app.get('/download/:name', (req, res) => {
-    const name = path.basename(req.params.name);
-    const p = path.join(BACKUP_DIR, name);
-    if (!fs.existsSync(p)) return res.status(404).send('Not found');
-    res.download(p);
-});
+app.get(
+    '/download/:name',
+    USE_SESSION_AUTH ? requireAuth : (req, res, next) => next(),
+    (req, res) => {
+        const name = path.basename(req.params.name);
+        const p = path.join(BACKUP_DIR, name);
+        if (!fs.existsSync(p)) return res.status(404).send('Not found');
+        res.download(p);
+    }
+);
 
 // Delete backup
-app.post('/delete/:name', (req, res) => {
-    const name = path.basename(req.params.name);
-    const p = path.join(BACKUP_DIR, name);
-    if (!fs.existsSync(p)) return res.status(404).send('Not found');
-    fs.rmSync(p, { recursive: true, force: true });
-    res.redirect('/');
-});
+app.post(
+    '/delete/:name',
+    USE_SESSION_AUTH ? requireAuth : (req, res, next) => next(),
+    (req, res) => {
+        const name = path.basename(req.params.name);
+        const p = path.join(BACKUP_DIR, name);
+        if (!fs.existsSync(p)) return res.status(404).send('Not found');
+        fs.rmSync(p, { recursive: true, force: true });
+        res.redirect('/');
+    }
+);
 
 // Health check endpoint for Docker
 app.get('/health', (req, res) => {

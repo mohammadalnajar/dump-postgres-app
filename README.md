@@ -60,9 +60,49 @@ A tiny, single-page Node.js/Express app to generate PostgreSQL backups (via `pg_
 - ✅ Options: include owner, schema-only, data-only, exclude schema, compression, extra args  
 - ✅ Timestamped, sanitized filenames (Navicat-style vibe)  
 - ✅ List, download, and delete backup files  
-- ✅ Basic security: optional HTTP Basic Auth, rate limiting, Helmet, no password logging  
+- ✅ **Secure authentication**: Session-based login with secure cookies (new!) or legacy Basic Auth  
 - ✅ Dockerized with `docker-compose`  
 - ✅ Optional auto-clean of old backups
+
+---
+
+## Authentication & Security
+
+This app now offers **two authentication modes** to protect your database backups:
+
+### 🔐 Session-based Authentication (Recommended)
+- **Modern login system** with username/password form
+- **Secure session management** with encrypted cookies
+- **Automatic logout** after 24 hours of inactivity
+- **CSRF protection** and secure cookie settings
+- **Password hashing** with bcrypt
+- **Production-ready** with proper security headers
+
+**Default credentials:**
+- Username: `admin`
+- Password: `admin123`
+
+⚠️ **Important**: Change these credentials in production using environment variables!
+
+### 🔒 Basic Auth (Legacy)
+- Simple HTTP Basic Authentication
+- Browser popup for credentials
+- Stateless (no sessions)
+- Available for backward compatibility
+
+**Configuration:**
+```bash
+# Use session-based auth (default)
+USE_SESSION_AUTH=true
+AUTH_USERNAME=your-username
+AUTH_PASSWORD=your-secure-password
+SESSION_SECRET=your-very-long-random-secret
+
+# Or use legacy basic auth
+USE_SESSION_AUTH=false
+BASIC_AUTH_USER=admin
+BASIC_AUTH_PASS=secure-password
+```
 
 ---
 

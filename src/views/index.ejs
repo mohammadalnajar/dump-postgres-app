@@ -11,7 +11,14 @@
 
 <body>
     <main class="container">
-        <h1><%= title %></h1>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h1><%= title %></h1>
+            <form method="POST" action="/logout" style="margin: 0;">
+                <button type="submit" style="background: #dc3545; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">
+                    Logout
+                </button>
+            </form>
+        </div>
 
         <form method="POST" action="/backup">
             <fieldset>
