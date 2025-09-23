@@ -4,7 +4,18 @@ A tiny, single-page Node.js/Express app to generate PostgreSQL backups (via `pg_
 
 ## Development (optional)l, and production-friendly. Runs in Docker.
 
-**NEW:** Supports **Navicat-style formatting** to generate SQL dumps that match the structure and formatting of Navicat-generated exports!
+**NEW:** Supports **Navicat-style formatting** to generate SQL dum## Security Notes
+
+- **Enable Authentication**: Use session-based authentication (recommended) or Basic Auth for protection.
+  - **Session Auth**: Set `AUTH_USERNAME`, `AUTH_PASSWORD`, and `SESSION_SECRET` environment variables.
+  - **Basic Auth**: Set `USE_SESSION_AUTH=false` and configure `BASIC_AUTH_USER`/`BASIC_AUTH_PASS`.
+- **Change Default Credentials**: Never use default credentials (`admin`/`admin123`) in production.
+- **Secure Session Secret**: Use a long, random `SESSION_SECRET` (32+ characters) in production.
+- **HTTPS Required**: Run behind HTTPS, especially when using session authentication.
+- **Network Security**: Use reverse proxy with IP allowlists, VPN access, or firewall rules.
+- **Regular Updates**: Keep Docker image updated to get latest PostgreSQL client and security patches.
+- **Secure Storage**: Store backups on encrypted volumes or sync to secure off-site storage.
+- **Environment Security**: Never commit `.env` files or log sensitive environment variables. match the structure and formatting of Navicat-generated exports!
 
 ## "Navicat-like" behavior
 
@@ -292,6 +303,12 @@ Response:
 | `APP_PORT`               |              `8080` | Internal Express port (exposed via Compose).                          |
 | `APP_BASE_PATH`          |                 `/` | Set if you’ll run under a sub-path behind a reverse proxy.            |
 | `APP_TITLE`              | `Postgres Dump App` | Page title.                                                           |
+| **Authentication**       |                     | **Session-based authentication (recommended)**                        |
+| `USE_SESSION_AUTH`       |              `true` | Use session auth (`true`) or legacy basic auth (`false`).             |
+| `AUTH_USERNAME`          |             `admin` | Username for session-based login.                                     |
+| `AUTH_PASSWORD`          |          `admin123` | Password for session-based login (change in production!).             |
+| `SESSION_SECRET`         |           *(empty)* | Secret key for session encryption (required in production).           |
+| **Legacy Basic Auth**    |                     | **Only used when USE_SESSION_AUTH=false**                             |
 | `BASIC_AUTH_USER`        |           *(empty)* | If set along with `BASIC_AUTH_PASS`, enables Basic Auth.              |
 | `BASIC_AUTH_PASS`        |           *(empty)* | Basic Auth password.                                                  |
 | `RATE_LIMIT_WINDOW_MS`   |             `60000` | Rate limit window in ms.                                              |

@@ -69,6 +69,15 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+// Stricter rate limiting for login attempts
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // Limit each IP to 5 requests per windowMs
+    message: 'Too many login attempts, please try again later.',
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
 // Authentication middleware
 const USE_SESSION_AUTH = process.env.USE_SESSION_AUTH !== 'false'; // Default to true
 const BA_USER = process.env.BASIC_AUTH_USER;
@@ -110,7 +119,7 @@ if (USE_SESSION_AUTH) {
     });
 
     // Login form submission
-    app.post('/login', redirectIfAuthenticated, (req, res) => {
+    app.post('/login', loginLimiter, redirectIfAuthenticated, (req, res) => {
         const { username, password } = req.body;
 
         if (!username || !password) {
