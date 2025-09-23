@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import helmet from 'helmet';
 import compression from 'compression';
