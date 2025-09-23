@@ -51,7 +51,7 @@ app.use(
             directives: {
                 'img-src': ["'self'"],
                 'script-src': ["'self'"],
-                'style-src': ["'self'"]
+                'style-src': ["'self'", "'unsafe-inline'"]
             }
         }
     })
