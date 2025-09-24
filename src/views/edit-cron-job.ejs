@@ -348,8 +348,8 @@
                             </select>
                         </div>
 
-                        <div class="form-grid">
-                            <div class="form-group">
+                        <div class="form-grid" id="retentionFields">
+                            <div class="form-group" id="retentionDaysGroup">
                                 <label>Retention Days</label>
                                 <input 
                                     name="retentionDays" 
@@ -360,7 +360,7 @@
                                     placeholder="30"
                                 />
                             </div>
-                            <div class="form-group">
+                            <div class="form-group" id="retentionCountGroup">
                                 <label>Keep Latest Files</label>
                                 <input 
                                     name="retentionCount" 
@@ -394,6 +394,9 @@
             const cronDescription = document.getElementById('cronDescription');
             const enableCleanupCheckbox = document.getElementById('enableCleanup');
             const cleanupOptions = document.getElementById('cleanupOptions');
+            const cleanupMethodSelect = document.getElementById('cleanupMethod');
+            const retentionDaysGroup = document.getElementById('retentionDaysGroup');
+            const retentionCountGroup = document.getElementById('retentionCountGroup');
             const saveButton = document.getElementById('saveButton');
             const form = document.querySelector('form');
 
@@ -409,8 +412,9 @@
                     cronPatternInput.value = this.value;
                     cronPatternInput.readOnly = true;
                     cronPatternInput.style.opacity = '0.6';
-                    validateAndDescribeCron();
                 }
+                // Always validate after preset change
+                validateAndDescribeCron();
             });
 
             // Handle custom pattern input
@@ -419,6 +423,27 @@
                     validateAndDescribeCron();
                 }
             });
+
+            // Handle cleanup method changes
+            cleanupMethodSelect.addEventListener('change', function() {
+                updateRetentionFieldsVisibility();
+            });
+
+            // Update retention fields visibility based on cleanup method
+            function updateRetentionFieldsVisibility() {
+                const method = cleanupMethodSelect.value;
+                
+                if (method === 'days') {
+                    retentionDaysGroup.style.display = 'block';
+                    retentionCountGroup.style.display = 'none';
+                } else if (method === 'count') {
+                    retentionDaysGroup.style.display = 'none';
+                    retentionCountGroup.style.display = 'block';
+                } else if (method === 'both') {
+                    retentionDaysGroup.style.display = 'block';
+                    retentionCountGroup.style.display = 'block';
+                }
+            }
 
             // Validate and describe cron pattern
             function validateAndDescribeCron() {
@@ -497,11 +522,15 @@
             enableCleanupCheckbox.addEventListener('change', function() {
                 if (this.checked) {
                     cleanupOptions.style.display = 'block';
+                    updateRetentionFieldsVisibility();
                 } else {
                     cleanupOptions.style.display = 'none';
                 }
             });
 
+            // Initialize retention fields visibility
+            updateRetentionFieldsVisibility();
+            
             // Initial validation
             validateAndDescribeCron();
         });
