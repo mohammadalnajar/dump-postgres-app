@@ -6,86 +6,306 @@
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>Login - <%= title %></title>
         <link rel="stylesheet" href="/style.css" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+            rel="stylesheet"
+        />
         <style>
+            body {
+                font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+                background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin: 0;
+                padding: 1rem;
+            }
+
+            .login-wrapper {
+                width: 100%;
+                max-width: 420px;
+                position: relative;
+            }
+
             .login-container {
-                max-width: 400px;
-                margin: 2rem auto;
-                padding: 2rem;
-                border: 1px solid #e1e5e9;
-                border-radius: 8px;
-                background: #f8f9fa;
+                background: rgba(15, 23, 42, 0.95);
+                backdrop-filter: blur(20px);
+                border: 1px solid rgba(148, 163, 184, 0.1);
+                border-radius: 20px;
+                padding: 3rem 2.5rem;
+                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2),
+                    inset 0 1px 0 rgba(148, 163, 184, 0.1);
+                position: relative;
+                overflow: hidden;
+            }
+
+            .login-container::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 1px;
+                background: linear-gradient(
+                    90deg,
+                    transparent,
+                    rgba(148, 163, 184, 0.3),
+                    transparent
+                );
+            }
+
+            .app-header {
+                text-align: center;
+                margin-bottom: 2.5rem;
+            }
+
+            .app-logo {
+                width: 64px;
+                height: 64px;
+                background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+                border-radius: 16px;
+                margin: 0 auto 1.5rem;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+                position: relative;
+                overflow: hidden;
+            }
+
+            .app-logo::before {
+                content: '';
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                width: 32px;
+                height: 32px;
+                background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='white' viewBox='0 0 24 24'%3E%3Cpath d='M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z'/%3E%3C/svg%3E")
+                    no-repeat center;
+                background-size: contain;
+            }
+
+            .app-title {
+                color: #f1f5f9;
+                font-size: 1.75rem;
+                font-weight: 600;
+                margin: 0 0 0.5rem 0;
+                letter-spacing: -0.025em;
+            }
+
+            .app-subtitle {
+                color: #94a3b8;
+                font-size: 0.95rem;
+                font-weight: 400;
+                margin: 0;
             }
 
             .login-form {
                 display: flex;
                 flex-direction: column;
-                gap: 1rem;
+                gap: 1.5rem;
             }
 
             .form-group {
-                display: flex;
-                flex-direction: column;
+                position: relative;
             }
 
             .form-group label {
-                margin-bottom: 0.5rem;
-                font-weight: bold;
+                display: block;
+                color: #e2e8f0;
+                font-size: 0.875rem;
+                font-weight: 500;
+                margin-bottom: 0.75rem;
+                letter-spacing: 0.025em;
             }
 
             .form-group input {
-                padding: 0.75rem;
-                border: 1px solid #ddd;
-                border-radius: 4px;
+                width: 100%;
+                padding: 1rem 1.25rem;
+                background: rgba(30, 41, 59, 0.5);
+                border: 1px solid rgba(148, 163, 184, 0.2);
+                border-radius: 12px;
+                color: #f1f5f9;
                 font-size: 1rem;
+                font-weight: 400;
+                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                outline: none;
+                box-sizing: border-box;
+            }
+
+            .form-group input:focus {
+                background: rgba(30, 41, 59, 0.8);
+                border-color: #3b82f6;
+                box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1), 0 1px 3px rgba(0, 0, 0, 0.1);
+                transform: translateY(-1px);
+            }
+
+            .form-group input::placeholder {
+                color: #64748b;
+                font-weight: 400;
             }
 
             .login-button {
-                padding: 0.75rem;
-                background: #007bff;
-                color: white;
+                width: 100%;
+                padding: 1rem 1.25rem;
+                background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
                 border: none;
-                border-radius: 4px;
+                border-radius: 12px;
+                color: white;
                 font-size: 1rem;
+                font-weight: 600;
                 cursor: pointer;
-                transition: background-color 0.2s;
+                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                position: relative;
+                overflow: hidden;
+                margin-top: 0.5rem;
+            }
+
+            .login-button::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(
+                    90deg,
+                    transparent,
+                    rgba(255, 255, 255, 0.2),
+                    transparent
+                );
+                transition: left 0.6s;
             }
 
             .login-button:hover {
-                background: #0056b3;
+                background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+                box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+                transform: translateY(-2px);
+            }
+
+            .login-button:hover::before {
+                left: 100%;
+            }
+
+            .login-button:active {
+                transform: translateY(0);
             }
 
             .error-message {
-                color: #dc3545;
-                background: #f8d7da;
-                border: 1px solid #f5c6cb;
-                padding: 0.75rem;
-                border-radius: 4px;
-                margin-bottom: 1rem;
+                background: rgba(239, 68, 68, 0.1);
+                border: 1px solid rgba(239, 68, 68, 0.2);
+                color: #fca5a5;
+                padding: 1rem;
+                border-radius: 12px;
+                margin-bottom: 1.5rem;
+                font-size: 0.875rem;
+                font-weight: 500;
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
             }
 
-            .app-title {
+            .error-message::before {
+                content: '⚠️';
+                font-size: 1.2rem;
+            }
+
+            .login-footer {
+                margin-top: 2rem;
                 text-align: center;
-                margin-bottom: 2rem;
-                color: #333;
+                font-size: 0.875rem;
+                color: #64748b;
+                line-height: 1.6;
+            }
+
+            .login-footer p {
+                margin: 0.5rem 0;
+            }
+
+            .credentials-info {
+                background: rgba(59, 130, 246, 0.1);
+                border: 1px solid rgba(59, 130, 246, 0.2);
+                border-radius: 12px;
+                padding: 1.25rem;
+                margin-top: 1rem;
+            }
+
+            .credentials-info strong {
+                color: #93c5fd;
+                font-weight: 600;
+            }
+
+            .security-note {
+                font-size: 0.8rem;
+                color: #475569;
+                margin-top: 1rem;
+                font-style: italic;
+            }
+
+            /* Loading state */
+            .login-button:disabled {
+                background: rgba(148, 163, 184, 0.3);
+                cursor: not-allowed;
+                transform: none;
+            }
+
+            .login-button:disabled:hover {
+                transform: none;
+                box-shadow: none;
+            }
+
+            /* Responsive design */
+            @media (max-width: 480px) {
+                .login-container {
+                    padding: 2rem 1.5rem;
+                    margin: 1rem;
+                    border-radius: 16px;
+                }
+
+                .app-title {
+                    font-size: 1.5rem;
+                }
+
+                .form-group input {
+                    padding: 0.875rem 1rem;
+                }
+
+                .login-button {
+                    padding: 0.875rem 1rem;
+                }
+            }
+
+            /* Accessibility improvements */
+            @media (prefers-reduced-motion: reduce) {
+                * {
+                    animation-duration: 0.01ms !important;
+                    animation-iteration-count: 1 !important;
+                    transition-duration: 0.01ms !important;
+                }
             }
         </style>
     </head>
 
     <body>
-        <main class="container">
+        <div class="login-wrapper">
             <div class="login-container">
-                <h1 class="app-title">Login</h1>
-                <p style="text-align: center; color: #666; margin-bottom: 2rem">
-                    Please enter your credentials to access <%= title %>
-                </p>
+                <div class="app-header">
+                    <div class="app-logo"></div>
+                    <h1 class="app-title"><%= title %></h1>
+                    <p class="app-subtitle">Database Management Portal</p>
+                </div>
 
                 <% if (error) { %>
                 <div class="error-message"><%= error %></div>
                 <% } %>
 
-                <form method="POST" action="/login" class="login-form">
+                <form method="POST" action="/login" class="login-form" id="loginForm">
                     <div class="form-group">
-                        <label for="username">Username:</label>
+                        <label for="username">Username</label>
                         <input
                             type="text"
                             id="username"
@@ -93,33 +313,83 @@
                             required
                             autocomplete="username"
                             value="<%= username || '' %>"
+                            placeholder="Enter your username"
                         />
                     </div>
 
                     <div class="form-group">
-                        <label for="password">Password:</label>
+                        <label for="password">Password</label>
                         <input
                             type="password"
                             id="password"
                             name="password"
                             required
                             autocomplete="current-password"
+                            placeholder="Enter your password"
                         />
                     </div>
 
-                    <button type="submit" class="login-button">Login</button>
+                    <button type="submit" class="login-button" id="loginBtn">Sign In</button>
                 </form>
 
-                <div style="margin-top: 2rem; text-align: center; font-size: 0.9rem; color: #666">
+                <div class="login-footer">
                     <% if (process.env.NODE_ENV !== 'production') { %>
-                    <p>Development Mode - Default credentials:</p>
-                    <p><strong>Username:</strong> admin</p>
-                    <p><strong>Password:</strong> admin123</p>
+                    <div class="credentials-info">
+                        <p><strong>Development Mode</strong></p>
+                        <p><strong>Username:</strong> admin</p>
+                        <p><strong>Password:</strong> admin123</p>
+                    </div>
                     <% } else { %>
-                    <p>Contact your administrator for login credentials.</p>
+                    <p>Contact your system administrator for login credentials.</p>
                     <% } %>
+
+                    <p class="security-note">
+                        Your session is secured with industry-standard encryption.
+                    </p>
                 </div>
             </div>
-        </main>
+        </div>
+
+        <script>
+            // Add loading state to login button
+            document.getElementById('loginForm').addEventListener('submit', function () {
+                const btn = document.getElementById('loginBtn');
+                btn.disabled = true;
+                btn.textContent = 'Signing In...';
+
+                // Re-enable button after 5 seconds in case of network issues
+                setTimeout(function () {
+                    btn.disabled = false;
+                    btn.textContent = 'Sign In';
+                }, 5000);
+            });
+
+            // Focus management for better UX
+            document.addEventListener('DOMContentLoaded', function () {
+                const usernameInput = document.getElementById('username');
+                const passwordInput = document.getElementById('password');
+
+                // Focus username field if empty, otherwise focus password
+                if (!usernameInput.value) {
+                    usernameInput.focus();
+                } else {
+                    passwordInput.focus();
+                }
+            });
+
+            // Keyboard navigation improvements
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+                    const form = e.target.closest('form');
+                    const inputs = Array.from(form.querySelectorAll('input[required]'));
+                    const currentIndex = inputs.indexOf(e.target);
+
+                    if (currentIndex < inputs.length - 1) {
+                        e.preventDefault();
+                        inputs[currentIndex + 1].focus();
+                    }
+                }
+            });
+        </script>
     </body>
 </html>
