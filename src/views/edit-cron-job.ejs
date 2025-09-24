@@ -2,14 +2,8 @@
 <html lang="en">
 
 <head>
-    <meta charset="utf-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <%- include('partials/head-common') %>
     <title><%= title %> - Edit Cron Job</title>
-    <link rel="stylesheet" href="/style.css" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
@@ -224,133 +218,6 @@
                 padding: 1.5rem;
             }
         }
-
-        /* Confirmation Modal Styles */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(8px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .modal-overlay.show {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .confirmation-modal {
-            background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%);
-            border: 1px solid rgba(148, 163, 184, 0.2);
-            border-radius: 20px;
-            padding: 2rem;
-            max-width: 480px;
-            width: calc(100% - 2rem);
-            margin: 1rem;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(20px);
-            transform: scale(0.95) translateY(20px);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .modal-overlay.show .confirmation-modal {
-            transform: scale(1) translateY(0);
-        }
-
-        .modal-header {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .modal-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            flex-shrink: 0;
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(29, 78, 216, 0.2) 100%);
-            color: #60a5fa;
-            border: 1px solid rgba(59, 130, 246, 0.3);
-        }
-
-        .modal-content {
-            flex: 1;
-        }
-
-        .modal-title {
-            color: #f1f5f9;
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin: 0 0 0.5rem 0;
-            line-height: 1.2;
-        }
-
-        .modal-message {
-            color: #94a3b8;
-            font-size: 0.95rem;
-            line-height: 1.5;
-            margin: 0;
-        }
-
-        .modal-actions {
-            display: flex;
-            gap: 0.75rem;
-            margin-top: 2rem;
-            justify-content: flex-end;
-        }
-
-        .modal-btn {
-            padding: 0.75rem 1.5rem;
-            border: none;
-            border-radius: 10px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            min-width: 100px;
-            justify-content: center;
-        }
-
-        .modal-btn-cancel {
-            background: rgba(71, 85, 105, 0.8);
-            color: #e2e8f0;
-            border: 1px solid rgba(148, 163, 184, 0.3);
-        }
-
-        .modal-btn-cancel:hover {
-            background: rgba(71, 85, 105, 1);
-            transform: translateY(-1px);
-        }
-
-        .modal-btn-confirm {
-            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-            color: white;
-        }
-
-        .modal-btn-confirm:hover {
-            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
-            transform: translateY(-1px);
-            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
-        }
     </style>
 </head>
 
@@ -514,29 +381,9 @@
         </div>
     </div>
 
-    <!-- Confirmation Modal -->
-    <div class="modal-overlay" id="confirmationModal">
-        <div class="confirmation-modal">
-            <div class="modal-header">
-                <div class="modal-icon" id="modalIcon">
-                    ℹ️
-                </div>
-                <div class="modal-content">
-                    <h3 class="modal-title" id="modalTitle">Confirm Changes</h3>
-                    <p class="modal-message" id="modalMessage">Are you sure you want to update this cron job?</p>
-                </div>
-            </div>
-            <div class="modal-actions">
-                <button type="button" class="modal-btn modal-btn-cancel" id="modalCancel">
-                    <span>Cancel</span>
-                </button>
-                <button type="button" class="modal-btn modal-btn-confirm" id="modalConfirm">
-                    <span>Save Changes</span>
-                </button>
-            </div>
-        </div>
-    </div>
+    <%- include('partials/confirmation-modal') %>
 
+    <%- include('partials/scripts-common') %>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const cronPresetSelect = document.getElementById('cronPreset');
@@ -673,8 +520,9 @@
                     return false;
                 }
 
-                // Show confirmation modal
-                showConfirmationModal({
+                // Show confirmation modal using the global modal system
+                ConfirmationModal.show({
+                    type: 'info',
                     title: 'Save Changes',
                     message: 'Are you sure you want to update this cron job?<br><br>This will restart the scheduled job if it\'s currently enabled.',
                     confirmText: 'Save Changes',
@@ -704,78 +552,7 @@
             
             // Initial validation
             validateAndDescribeCron();
-
-            // Initialize confirmation modal
-            initializeConfirmationModal();
         });
-
-        // Confirmation Modal System
-        let currentConfirmationCallback = null;
-
-        function initializeConfirmationModal() {
-            const modal = document.getElementById('confirmationModal');
-            const cancelBtn = document.getElementById('modalCancel');
-            const confirmBtn = document.getElementById('modalConfirm');
-
-            // Close modal on cancel
-            cancelBtn.addEventListener('click', hideConfirmationModal);
-
-            // Close modal on overlay click
-            modal.addEventListener('click', function(e) {
-                if (e.target === modal) {
-                    hideConfirmationModal();
-                }
-            });
-
-            // Close modal on Escape key
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape' && modal.classList.contains('show')) {
-                    hideConfirmationModal();
-                }
-            });
-
-            // Confirm action
-            confirmBtn.addEventListener('click', function() {
-                if (currentConfirmationCallback) {
-                    currentConfirmationCallback();
-                    hideConfirmationModal();
-                }
-            });
-        }
-
-        function showConfirmationModal(options) {
-            const modal = document.getElementById('confirmationModal');
-            const modalIcon = document.getElementById('modalIcon');
-            const modalTitle = document.getElementById('modalTitle');
-            const modalMessage = document.getElementById('modalMessage');
-            const confirmBtn = document.getElementById('modalConfirm');
-
-            modalTitle.textContent = options.title || 'Confirm Action';
-            modalMessage.innerHTML = options.message || 'Are you sure you want to continue?';
-            confirmBtn.innerHTML = `<span>${options.confirmText || 'Confirm'}</span>`;
-
-            // Store callback
-            currentConfirmationCallback = options.callback || null;
-
-            // Show modal with animation
-            modal.classList.add('show');
-            
-            // Focus the confirm button for keyboard navigation
-            setTimeout(() => {
-                confirmBtn.focus();
-            }, 100);
-        }
-
-        function hideConfirmationModal() {
-            const modal = document.getElementById('confirmationModal');
-            const confirmBtn = document.getElementById('modalConfirm');
-            
-            modal.classList.remove('show');
-            
-            // Reset state
-            currentConfirmationCallback = null;
-            confirmBtn.innerHTML = '<span>Save Changes</span>';
-        }
     </script>
 </body>
 

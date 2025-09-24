@@ -1,0 +1,21 @@
+<!-- Confirmation Modal Component -->
+<!-- Usage: <%- include('partials/confirmation-modal') %> -->
+<div class="modal-overlay" id="confirmationModal">
+    <div class="confirmation-modal">
+        <div class="modal-header">
+            <div class="modal-icon" id="modalIcon">ℹ️</div>
+            <div class="modal-content">
+                <h3 class="modal-title" id="modalTitle">Confirm Action</h3>
+                <p class="modal-message" id="modalMessage">Are you sure you want to continue?</p>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button type="button" class="modal-btn modal-btn-cancel" id="modalCancel">
+                <span>Cancel</span>
+            </button>
+            <button type="button" class="modal-btn modal-btn-confirm" id="modalConfirm">
+                <span>Confirm</span>
+            </button>
+        </div>
+    </div>
+</div>
