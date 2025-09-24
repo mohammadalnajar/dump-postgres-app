@@ -807,6 +807,63 @@
                             </div>
                         </div>
 
+                        <!-- Backup Cleanup Configuration (Hidden by default) -->
+                        <div class="card" id="cleanupConfigCard" style="display: none;">
+                            <div class="card-header">
+                                <h2 class="card-title">Backup Cleanup</h2>
+                                <p class="card-description">Automatically manage old backup files</p>
+                            </div>
+                            
+                            <div class="checkbox-group" style="margin-bottom: 1.5rem;">
+                                <label class="custom-checkbox">
+                                    <input type="checkbox" id="enableCleanup" name="enableCleanup" />
+                                    <span class="checkbox-indicator"></span>
+                                </label>
+                                <span>Enable automatic cleanup</span>
+                            </div>
+
+                            <div id="cleanupOptions" style="display: none;">
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label>Cleanup Method</label>
+                                        <select name="cleanupMethod" id="cleanupMethod">
+                                            <option value="days">Keep files for X days</option>
+                                            <option value="count">Keep latest X files</option>
+                                            <option value="both">Use both methods (AND logic)</option>
+                                        </select>
+                                        <div class="helper-text" id="cleanupMethodHelp">Delete backups older than specified days</div>
+                                    </div>
+                                </div>
+
+                                <div class="form-grid" id="cleanupValues">
+                                    <div class="form-group" id="retentionDaysGroup">
+                                        <label>Retention Days</label>
+                                        <input name="retentionDays" type="number" min="1" max="365" value="30" placeholder="30" />
+                                        <div class="helper-text">Delete backups older than this many days</div>
+                                    </div>
+                                    <div class="form-group" id="retentionCountGroup" style="display: none;">
+                                        <label>Keep Latest Files</label>
+                                        <input name="retentionCount" type="number" min="1" max="1000" value="10" placeholder="10" />
+                                        <div class="helper-text">Number of most recent backups to keep</div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Cleanup Timing</label>
+                                    <select name="cleanupTiming">
+                                        <option value="after">After creating backup (recommended)</option>
+                                        <option value="before">Before creating backup</option>
+                                    </select>
+                                    <div class="helper-text">When to run the cleanup process</div>
+                                </div>
+
+                                <div class="alert alert-info" style="margin-top: 1rem;">
+                                    <strong>💡 Cleanup Preview:</strong>
+                                    <div id="cleanupPreview">Enable cleanup to see preview</div>
+                                </div>
+                            </div>
+                        </div>
+
 
                         <!-- Actions -->
                         <div class="card">
@@ -889,6 +946,45 @@
                             <p>Create your first backup to see files here.</p>
                         </div>
                         <% } %>
+                        
+                        <% if (files && files.length > 0) { %>
+                        <!-- Manual Cleanup Form -->
+                        <div style="border-top: 1px solid rgba(148, 163, 184, 0.1); margin-top: 2rem; padding-top: 2rem;">
+                            <div class="card-header">
+                                <h3 class="card-title">Manual Cleanup</h3>
+                                <p class="card-description">Clean up old backup files manually</p>
+                            </div>
+                            
+                            <form method="POST" action="/cleanup" style="background: transparent; border: none; padding: 0;">
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label>Cleanup Method</label>
+                                        <select name="method">
+                                            <option value="days">Delete files older than X days</option>
+                                            <option value="count">Keep only X newest files</option>
+                                            <option value="both">Both conditions (AND logic)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label>Retention Days</label>
+                                        <input name="retentionDays" type="number" min="1" max="365" value="30" placeholder="30" />
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Keep Latest Files</label>
+                                        <input name="retentionCount" type="number" min="1" max="100" value="10" placeholder="10" />
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-danger" onclick="return confirm('This will permanently delete old backup files. Continue?')">
+                                    <span>🧹</span>
+                                    Clean Up Now
+                                </button>
+                            </form>
+                        </div>
+                        <% } %>
                     </div>
                 </section>
 
@@ -907,6 +1003,7 @@
                                     <th>Job Name</th>
                                     <th>Schedule</th>
                                     <th>Database</th>
+                                    <th>Cleanup Policy</th>
                                     <th>Status</th>
                                     <th>Last Run</th>
                                     <th>Actions</th>
@@ -932,6 +1029,7 @@
                                                 job.cronPattern === '*/5 * * * *' ? 'Every 5 minutes' :
                                                 job.cronPattern === '*/10 * * * *' ? 'Every 10 minutes' :
                                                 job.cronPattern === '*/30 * * * *' ? 'Every 30 minutes' :
+                                                job.cronPattern === '*/15 * * * *' ? 'Every 15 minutes' :
                                                 job.cronPattern === '0 */6 * * *' ? 'Every 6 hours' :
                                                 job.cronPattern === '0 0 * * 0' ? 'Weekly on Sunday' :
                                                 job.cronPattern === '0 0 1 * *' ? 'Monthly' :
@@ -943,6 +1041,28 @@
                                             <div><%= job.config.db %></div>
                                             <small style="color: #64748b;"><%= job.config.host %></small>
                                         </div>
+                                    </td>
+                                    <td>
+                                        <% if (job.config.cleanup && job.config.cleanup.enabled) { %>
+                                            <div style="color: #10b981;">
+                                                <span>🧹</span>
+                                                <% if (job.config.cleanup.method === 'days') { %>
+                                                    Keep <%= job.config.cleanup.retentionDays %> days
+                                                <% } else if (job.config.cleanup.method === 'count') { %>
+                                                    Keep <%= job.config.cleanup.retentionCount %> files
+                                                <% } else if (job.config.cleanup.method === 'both') { %>
+                                                    Keep <%= job.config.cleanup.retentionDays %>d & <%= job.config.cleanup.retentionCount %> files
+                                                <% } %>
+                                            </div>
+                                            <small style="color: #64748b;">
+                                                <%= job.config.cleanup.timing === 'after' ? 'After backup' : 'Before backup' %>
+                                            </small>
+                                        <% } else { %>
+                                            <span style="color: #64748b;">
+                                                <span>📦</span>
+                                                Keep all
+                                            </span>
+                                        <% } %>
                                     </td>
                                     <td>
                                         <span class="status-badge status-<%= job.enabled ? 'enabled' : 'disabled' %>">
@@ -1097,6 +1217,28 @@
                 });
             }
 
+            // Cleanup configuration handlers
+            const enableCleanup = document.getElementById('enableCleanup');
+            const cleanupMethod = document.getElementById('cleanupMethod');
+            const retentionDays = document.querySelector('input[name="retentionDays"]');
+            const retentionCount = document.querySelector('input[name="retentionCount"]');
+            
+            if (enableCleanup) {
+                enableCleanup.addEventListener('change', toggleCleanupOptions);
+            }
+            
+            if (cleanupMethod) {
+                cleanupMethod.addEventListener('change', toggleCleanupMethod);
+            }
+            
+            // Update preview when values change
+            [retentionDays, retentionCount, cleanupMethod].forEach(element => {
+                if (element) {
+                    element.addEventListener('input', updateCleanupPreview);
+                    element.addEventListener('change', updateCleanupPreview);
+                }
+            });
+
             // Form submission handling
             const backupForm = document.getElementById('backupForm');
             if (backupForm) {
@@ -1117,6 +1259,90 @@
             toggleFormatOptions();
             toggleCronJobSection();
             toggleCustomCronPattern();
+            toggleCleanupOptions();
+            toggleCleanupMethod();
+            updateCleanupPreview();
+        }
+
+        // Handle cleanup enable/disable
+        function toggleCleanupOptions() {
+            const checkbox = document.getElementById('enableCleanup');
+            const optionsDiv = document.getElementById('cleanupOptions');
+            
+            if (!checkbox || !optionsDiv) return;
+            
+            if (checkbox.checked) {
+                optionsDiv.style.display = 'block';
+                updateCleanupPreview();
+            } else {
+                optionsDiv.style.display = 'none';
+            }
+        }
+
+        // Handle cleanup method changes
+        function toggleCleanupMethod() {
+            const methodSelect = document.getElementById('cleanupMethod');
+            const helpDiv = document.getElementById('cleanupMethodHelp');
+            const daysGroup = document.getElementById('retentionDaysGroup');
+            const countGroup = document.getElementById('retentionCountGroup');
+            
+            if (!methodSelect || !daysGroup || !countGroup || !helpDiv) return;
+            
+            const method = methodSelect.value;
+            
+            switch(method) {
+                case 'days':
+                    daysGroup.style.display = 'block';
+                    countGroup.style.display = 'none';
+                    helpDiv.textContent = 'Delete backups older than specified days';
+                    break;
+                case 'count':
+                    daysGroup.style.display = 'none';
+                    countGroup.style.display = 'block';
+                    helpDiv.textContent = 'Keep only the most recent backups';
+                    break;
+                case 'both':
+                    daysGroup.style.display = 'block';
+                    countGroup.style.display = 'block';
+                    helpDiv.textContent = 'Files must meet BOTH criteria to be kept';
+                    break;
+            }
+            updateCleanupPreview();
+        }
+
+        // Update cleanup preview
+        function updateCleanupPreview() {
+            const enableCleanup = document.getElementById('enableCleanup');
+            const methodSelect = document.getElementById('cleanupMethod');
+            const daysInput = document.querySelector('input[name="retentionDays"]');
+            const countInput = document.querySelector('input[name="retentionCount"]');
+            const previewDiv = document.getElementById('cleanupPreview');
+            
+            if (!enableCleanup || !previewDiv) return;
+            
+            if (!enableCleanup.checked) {
+                previewDiv.innerHTML = 'Cleanup disabled - all backup files will be kept';
+                return;
+            }
+            
+            const method = methodSelect?.value || 'days';
+            const days = parseInt(daysInput?.value) || 30;
+            const count = parseInt(countInput?.value) || 10;
+            
+            let preview = '';
+            switch(method) {
+                case 'days':
+                    preview = `Delete backups older than <strong>${days} day${days !== 1 ? 's' : ''}</strong>`;
+                    break;
+                case 'count':
+                    preview = `Keep only the latest <strong>${count} backup${count !== 1 ? 's' : ''}</strong>`;
+                    break;
+                case 'both':
+                    preview = `Keep files that are both: less than <strong>${days} day${days !== 1 ? 's' : ''}</strong> old AND among the latest <strong>${count} backup${count !== 1 ? 's' : ''}</strong>`;
+                    break;
+            }
+            
+            previewDiv.innerHTML = preview;
         }
 
         // Show/hide options based on output style
@@ -1146,6 +1372,7 @@
         function toggleCronJobSection() {
             const checkbox = document.getElementById('enableCronJob');
             const cronCard = document.getElementById('cronJobCard');
+            const cleanupCard = document.getElementById('cleanupConfigCard');
             const submitBtn = document.getElementById('submitBtn');
             const form = document.getElementById('backupForm');
             const jobNameInput = document.querySelector('input[name="jobName"]');
@@ -1154,6 +1381,7 @@
             
             if (checkbox.checked) {
                 cronCard.style.display = 'block';
+                if (cleanupCard) cleanupCard.style.display = 'block';
                 submitBtn.innerHTML = '<span>⏰</span> Create Scheduled Job';
                 form.action = '/cron-jobs';
                 if (jobNameInput) {
@@ -1161,6 +1389,7 @@
                 }
             } else {
                 cronCard.style.display = 'none';
+                if (cleanupCard) cleanupCard.style.display = 'none';
                 submitBtn.innerHTML = '<span>🔄</span> Create Backup';
                 form.action = '/backup';
                 if (jobNameInput) {

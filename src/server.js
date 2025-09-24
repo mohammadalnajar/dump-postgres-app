@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { buildPgDumpArgs, runPgDump, extensionFor, listBackups, ensureDir } from './lib/pgdump.js';
 import { requireStr, optionalBool, optionalInt, enumOf } from './lib/validate.js';
 import { sanitizeName, timestamp } from './lib/sanitize.js';
+import { cleanupBackups, previewCleanup, formatCleanupResult } from './lib/backupCleanup.js';
 import {
     requireAuth,
     redirectIfAuthenticated,
@@ -282,6 +283,35 @@ app.post(
                 extraArgs: (req.body.extraArgs || '').trim()
             };
 
+            // Add cleanup configuration if enabled
+            const cleanupConfig = {};
+            if (optionalBool(req.body.enableCleanup)) {
+                cleanupConfig.enabled = true;
+                cleanupConfig.method = enumOf(
+                    req.body.cleanupMethod || 'days',
+                    ['days', 'count', 'both'],
+                    'days'
+                );
+                cleanupConfig.timing = enumOf(
+                    req.body.cleanupTiming || 'after',
+                    ['before', 'after'],
+                    'after'
+                );
+
+                if (cleanupConfig.method === 'days' || cleanupConfig.method === 'both') {
+                    cleanupConfig.retentionDays = optionalInt(req.body.retentionDays, 1, 365) ?? 30;
+                }
+
+                if (cleanupConfig.method === 'count' || cleanupConfig.method === 'both') {
+                    cleanupConfig.retentionCount =
+                        optionalInt(req.body.retentionCount, 1, 1000) ?? 10;
+                }
+            } else {
+                cleanupConfig.enabled = false;
+            }
+
+            config.cleanup = cleanupConfig;
+
             const job = createCronJob({
                 name: jobName,
                 cronPattern,
@@ -359,6 +389,80 @@ app.post(
         const description = isValid ? describeCronPattern(pattern) : 'Invalid pattern';
 
         res.json({ valid: isValid, description });
+    }
+);
+
+// Manual cleanup endpoint
+app.post(
+    '/cleanup',
+    USE_SESSION_AUTH ? requireAuth : (req, res, next) => next(),
+    async (req, res) => {
+        try {
+            // Build cleanup config from form data
+            const cleanupConfig = {
+                enabled: true,
+                method: enumOf(req.body.method || 'days', ['days', 'count', 'both'], 'days'),
+                timing: 'manual'
+            };
+
+            if (cleanupConfig.method === 'days' || cleanupConfig.method === 'both') {
+                cleanupConfig.retentionDays = optionalInt(req.body.retentionDays, 1, 365) ?? 30;
+            }
+
+            if (cleanupConfig.method === 'count' || cleanupConfig.method === 'both') {
+                cleanupConfig.retentionCount = optionalInt(req.body.retentionCount, 1, 1000) ?? 10;
+            }
+
+            // Run cleanup
+            const result = await cleanupBackups(BACKUP_DIR, cleanupConfig);
+            const message = formatCleanupResult(result);
+
+            if (result.errors.length > 0) {
+                res.redirect(
+                    '/?error=' + encodeURIComponent(`Cleanup completed with errors: ${message}`)
+                );
+            } else {
+                res.redirect('/?message=' + encodeURIComponent(`Cleanup completed: ${message}`));
+            }
+        } catch (error) {
+            console.error('Manual cleanup error:', error);
+            res.redirect(
+                '/?error=' + encodeURIComponent(`Cleanup failed: ${error.message || String(error)}`)
+            );
+        }
+    }
+);
+
+// Preview cleanup endpoint (API)
+app.post(
+    '/api/preview-cleanup',
+    USE_SESSION_AUTH ? requireAuth : (req, res, next) => next(),
+    async (req, res) => {
+        try {
+            const cleanupConfig = {
+                enabled: true,
+                method: enumOf(req.body.method || 'days', ['days', 'count', 'both'], 'days')
+            };
+
+            if (cleanupConfig.method === 'days' || cleanupConfig.method === 'both') {
+                cleanupConfig.retentionDays = optionalInt(req.body.retentionDays, 1, 365) ?? 30;
+            }
+
+            if (cleanupConfig.method === 'count' || cleanupConfig.method === 'both') {
+                cleanupConfig.retentionCount = optionalInt(req.body.retentionCount, 1, 1000) ?? 10;
+            }
+
+            const preview = await previewCleanup(BACKUP_DIR, cleanupConfig, req.body.filePattern);
+            res.json(preview);
+        } catch (error) {
+            console.error('Cleanup preview error:', error);
+            res.json({
+                error: error.message || String(error),
+                toDelete: [],
+                toKeep: [],
+                summary: 'Preview failed'
+            });
+        }
     }
 );
 

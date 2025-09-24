@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import crypto from 'node:crypto';
 import { buildPgDumpArgs, runPgDump, extensionFor, ensureDir } from './pgdump.js';
 import { sanitizeName, timestamp } from './sanitize.js';
+import { cleanupBackups, formatCleanupResult } from './backupCleanup.js';
 
 const JOBS_FILE = path.join(process.cwd(), 'cron-jobs.json');
 const BACKUP_DIR = path.join(process.cwd(), 'backups');
@@ -282,6 +283,26 @@ async function executeBackupJob(job) {
     try {
         console.log(`Executing scheduled backup job: ${job.name}`);
 
+        // Run cleanup before backup if configured
+        let cleanupResultBefore = null;
+        if (job.config.cleanup?.enabled && job.config.cleanup?.timing === 'before') {
+            try {
+                cleanupResultBefore = await cleanupBackups(
+                    BACKUP_DIR,
+                    job.config.cleanup,
+                    job.config.db
+                );
+                console.log(
+                    `Pre-backup cleanup for ${job.name}: ${formatCleanupResult(
+                        cleanupResultBefore
+                    )}`
+                );
+            } catch (cleanupError) {
+                console.warn(`Pre-backup cleanup failed for ${job.name}:`, cleanupError);
+                // Continue with backup even if cleanup fails
+            }
+        }
+
         // Ensure backup directory exists (async)
         const { mkdir } = await import('node:fs/promises');
         await mkdir(BACKUP_DIR, { recursive: true });
@@ -329,6 +350,35 @@ async function executeBackupJob(job) {
             }
         });
 
+        // Run cleanup after backup if configured
+        let cleanupResultAfter = null;
+        if (job.config.cleanup?.enabled && job.config.cleanup?.timing === 'after') {
+            try {
+                cleanupResultAfter = await cleanupBackups(
+                    BACKUP_DIR,
+                    job.config.cleanup,
+                    job.config.db
+                );
+                console.log(
+                    `Post-backup cleanup for ${job.name}: ${formatCleanupResult(
+                        cleanupResultAfter
+                    )}`
+                );
+            } catch (cleanupError) {
+                console.warn(`Post-backup cleanup failed for ${job.name}:`, cleanupError);
+                // Don't fail the backup for cleanup errors
+            }
+        }
+
+        // Prepare result message
+        let resultMessage = `Backup created: ${baseName}`;
+        if (cleanupResultBefore && cleanupResultBefore.deleted.length > 0) {
+            resultMessage += ` (Pre-cleanup: deleted ${cleanupResultBefore.deleted.length} old files)`;
+        }
+        if (cleanupResultAfter && cleanupResultAfter.deleted.length > 0) {
+            resultMessage += ` (Post-cleanup: deleted ${cleanupResultAfter.deleted.length} old files)`;
+        }
+
         // Update job status (async)
         try {
             const jobs = await loadJobsAsync();
@@ -336,7 +386,7 @@ async function executeBackupJob(job) {
             if (jobIndex !== -1) {
                 jobs[jobIndex].lastRun = new Date().toISOString();
                 jobs[jobIndex].lastStatus = 'success';
-                jobs[jobIndex].lastResult = `Backup created: ${baseName}`;
+                jobs[jobIndex].lastResult = resultMessage;
                 await saveJobsAsync(jobs);
             }
         } catch (saveError) {
