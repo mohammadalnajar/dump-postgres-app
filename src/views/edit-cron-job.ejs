@@ -288,10 +288,10 @@
                 <div class="form-group">
                     <label>Schedule Preset</label>
                     <select name="cronPreset" id="cronPreset">
-                        <option value="custom" <%= !predefinedPatterns.find(p => p.pattern === job.cronPattern) ? 'selected' : '' %>>Custom Pattern</option>
+                        <option value="custom" <%= !predefinedPatterns.find(p => p.value === job.cronPattern) ? 'selected' : '' %>>Custom Pattern</option>
                         <% predefinedPatterns.forEach(pattern => { %>
-                        <option value="<%= pattern.pattern %>" <%= pattern.pattern === job.cronPattern ? 'selected' : '' %>>
-                            <%= pattern.name %> (<%= pattern.description %>)
+                        <option value="<%= pattern.value %>" <%= pattern.value === job.cronPattern ? 'selected' : '' %>>
+                            <%= pattern.label %> (<%= pattern.description %>)
                         </option>
                         <% }) %>
                     </select>
@@ -305,7 +305,7 @@
                         id="cronPattern" 
                         value="<%= job.cronPattern %>" 
                         placeholder="0 2 * * *"
-                        <%= predefinedPatterns.find(p => p.pattern === job.cronPattern) ? 'readonly style="opacity: 0.6;"' : '' %>
+                        <%= predefinedPatterns.find(p => p.value === job.cronPattern) ? 'readonly style="opacity: 0.6;"' : '' %>
                     >
                     <div class="helper-text">Format: minute hour day month weekday (e.g., "0 2 * * *" for daily at 2 AM)</div>
                     <div class="cron-description" id="cronDescription"></div>
@@ -413,8 +413,10 @@
                     cronPatternInput.readOnly = true;
                     cronPatternInput.style.opacity = '0.6';
                 }
-                // Always validate after preset change
-                validateAndDescribeCron();
+                // Add a small delay to ensure the input value is updated before validation
+                setTimeout(() => {
+                    validateAndDescribeCron();
+                }, 50);
             });
 
             // Handle custom pattern input
@@ -447,7 +449,9 @@
 
             // Validate and describe cron pattern
             function validateAndDescribeCron() {
+                console.log('Validating cron pattern:', cronPatternInput.value); // Debug log
                 const pattern = cronPatternInput.value.trim();
+                
                 if (!pattern) {
                     cronDescription.style.display = 'none';
                     isValidPattern = false;
@@ -462,17 +466,24 @@
                     },
                     body: 'pattern=' + encodeURIComponent(pattern)
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     if (data.valid) {
                         cronDescription.innerHTML = '✓ ' + data.description;
                         cronDescription.style.color = '#34d399';
                         cronDescription.style.borderColor = 'rgba(16, 185, 129, 0.2)';
+                        cronDescription.style.background = 'rgba(16, 185, 129, 0.1)';
                         isValidPattern = true;
                     } else {
                         cronDescription.innerHTML = '✗ ' + data.description;
                         cronDescription.style.color = '#fca5a5';
                         cronDescription.style.borderColor = 'rgba(239, 68, 68, 0.2)';
+                        cronDescription.style.background = 'rgba(239, 68, 68, 0.1)';
                         isValidPattern = false;
                     }
                     cronDescription.style.display = 'block';
@@ -480,9 +491,14 @@
                 })
                 .catch(error => {
                     console.error('Error validating cron pattern:', error);
+                    cronDescription.innerHTML = '✗ Error validating pattern';
+                    cronDescription.style.color = '#fca5a5';
+                    cronDescription.style.borderColor = 'rgba(239, 68, 68, 0.2)';
+                    cronDescription.style.background = 'rgba(239, 68, 68, 0.1)';
+                    cronDescription.style.display = 'block';
                     isValidPattern = false;
                     updateSaveButton();
-                });
+                })
             }
 
             // Update save button state
