@@ -38,23 +38,42 @@ bash scripts/setup-hooks.sh
 ## 🔧 **Available Hooks**
 
 ### **Pre-commit Hook**
-- **Purpose**: Warns about TODO comments in code files before committing
-- **Behavior**: 
-  - Scans staged files for `TODO`, `FIXME`, `HACK`, `BUG` comments
-  - Excludes documentation files (`.md` files) that should contain TODOs
-  - Prompts for confirmation before allowing commit
-  - Provides bypass options
+- **Purpose**: 
+  - Optionally prompts for custom commit date/time
+  - Warns about TODO comments in code files before committing
+- **Features**:
+  - **Custom Date/Time**: Prompts to set custom `GIT_AUTHOR_DATE` and `GIT_COMMITTER_DATE`
+  - **TODO Checking**: Scans staged files for `TODO`, `FIXME`, `HACK`, `BUG` comments
+  - **Smart Exclusions**: Excludes documentation files (`.md` files) that should contain TODOs
+  - **User Prompts**: Asks for confirmation before allowing commit
+  - **Multiple Bypass Options**: Environment variables and git flags
 
 ### **Usage Examples**
 ```bash
-# Normal commit (will check for TODOs)
+# Normal commit (will prompt for custom date and check TODOs)
 git commit -m "Add new feature"
 
-# Skip TODO check for this commit
+# Skip all hooks for this commit  
 git commit --no-verify -m "WIP: debugging issue"
 
-# Skip TODO check with environment variable
+# Skip only TODO check (still prompts for date)
 SKIP_TODO_CHECK=1 git commit -m "Add feature with TODOs"
+
+# Skip only date prompt (still checks TODOs)
+SKIP_DATE_PROMPT=1 git commit -m "Quick fix"
+
+# Skip both date prompt and TODO check
+SKIP_DATE_PROMPT=1 SKIP_TODO_CHECK=1 git commit -m "Emergency fix"
+```
+
+### **Custom Date Examples**
+When prompted for custom date/time, you can use various formats:
+```bash
+# Date and time formats supported:
+2025-09-24 08:51:20                 # Space-separated
+2025-09-24T08:51:20                # ISO format
+2025-09-24T08:51:20+02:00          # ISO with timezone
+2025-09-24T08:51:20-05:00          # ISO with negative timezone
 ```
 
 ## 🎯 **For New Team Members**
@@ -134,8 +153,20 @@ npm run setup:hooks
 # Skip all hooks for one commit
 git commit --no-verify -m "emergency fix"
 
-# Skip TODO check only
+# Skip TODO check only (still prompts for custom date)
 SKIP_TODO_CHECK=1 git commit -m "commit message"
+
+# Skip date prompt only (still checks TODOs)
+SKIP_DATE_PROMPT=1 git commit -m "commit message"
+
+# Skip both date prompt and TODO check
+SKIP_DATE_PROMPT=1 SKIP_TODO_CHECK=1 git commit -m "commit message"
+```
+
+### **Environment Variables Reference**
+```bash
+SKIP_TODO_CHECK=1     # Skip TODO comment checking
+SKIP_DATE_PROMPT=1    # Skip custom date/time prompt
 ```
 
 ## 📋 **Integration with TODO System**
@@ -147,7 +178,24 @@ The pre-commit hook is integrated with our TODO tracking system:
 - **Suggests** running `make todos` to see all TODO items
 - **Encourages** updating `TODO.md` with tracked tasks
 
-## 🔄 **Continuous Integration**
+## � **Custom Date/Time Feature**
+
+The pre-commit hook now supports setting custom commit dates:
+
+- **Prompts** for custom date/time before each commit
+- **Supports** multiple date formats (ISO, space-separated, with/without timezone)
+- **Sets** both `GIT_AUTHOR_DATE` and `GIT_COMMITTER_DATE`
+- **Validates** date format before applying
+- **Fallback** to current time on invalid input
+- **Bypass** with `SKIP_DATE_PROMPT=1` environment variable
+
+### **Use Cases**
+- **Backdating commits** for proper chronological order
+- **Batch commits** with specific timestamps
+- **Time zone adjustments** for distributed teams
+- **Historical reconstruction** of development timeline
+
+## �🔄 **Continuous Integration**
 
 For CI/CD environments, hooks can be bypassed:
 
@@ -156,11 +204,12 @@ For CI/CD environments, hooks can be bypassed:
 - name: Commit changes
   run: git commit --no-verify -m "CI: automated changes"
 
-# Or with environment variable
+# Or with environment variables
 - name: Commit changes  
   run: git commit -m "CI: automated changes"
   env:
     SKIP_TODO_CHECK: 1
+    SKIP_DATE_PROMPT: 1
 ```
 
 ## 🎉 **Benefits**

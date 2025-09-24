@@ -1,10 +1,98 @@
 #!/bin/bash
 
-# Pre-commit hook to remind about TODOs
-# This will warn you if you're committing files with TODO comments
+# Pre-commit hook to remind about TODOs and optionally set custom commit date
+# This will:
+# 1. Optionally ask for custom commit date/time
+# 2. Warn you if you're committing files with TODO comments
 # 
-# To bypass this check, use: git commit --no-verify
-# Or set environment variable: SKIP_TODO_CHECK=1
+# To bypass all checks, use: git commit --no-verify
+# To skip only TODO check: SKIP_TODO_CHECK=1
+# To skip only date prompt: SKIP_DATE_PROMPT=1
+
+# Function to prompt for custom commit date
+prompt_for_custom_date() {
+    if [[ "$SKIP_DATE_PROMPT" == "1" ]]; then
+        return 0
+    fi
+    
+    echo "📅 Custom commit date/time?"
+    echo "   Current time: $(date '+%Y-%m-%d %H:%M:%S %Z')"
+    echo "🔄 Set custom date/time for this commit? (y/N) "
+    echo "   💡 Tip: Use SKIP_DATE_PROMPT=1 to skip this prompt"
+    
+    response=""
+    if [ -t 0 ]; then
+        # If stdin is a terminal
+        read -r response
+    elif [ -r /dev/tty ]; then
+        # Try to read from controlling terminal
+        read -r response < /dev/tty
+    else
+        # Fallback: skip date prompt in automated environments
+        return 0
+    fi
+    
+    case "$response" in
+        [Yy]|[Yy][Ee][Ss])
+            echo ""
+            echo "📝 Enter custom date and time:"
+            echo "   Format examples:"
+            echo "   • 2025-09-24 08:51:20"
+            echo "   • 2025-09-24T08:51:20"
+            echo "   • 2025-09-24T08:51:20+02:00"
+            echo ""
+            echo -n "📅 Date/time: "
+            
+            custom_date=""
+            if [ -t 0 ]; then
+                read -r custom_date
+            elif [ -r /dev/tty ]; then
+                read -r custom_date < /dev/tty
+            else
+                echo "❌ Unable to read from terminal for date input."
+                return 1
+            fi
+            
+            if [[ -n "$custom_date" ]]; then
+                # Try to parse and validate the date
+                if date -d "$custom_date" >/dev/null 2>&1 || date -j -f "%Y-%m-%d %H:%M:%S" "$custom_date" >/dev/null 2>&1 || date -j -f "%Y-%m-%dT%H:%M:%S" "$custom_date" >/dev/null 2>&1; then
+                    # Convert to ISO format with timezone for consistency
+                    if [[ "$custom_date" =~ \+[0-9]{2}:[0-9]{2}$ ]]; then
+                        # Already has timezone
+                        formatted_date="$custom_date"
+                    elif [[ "$custom_date" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}$ ]]; then
+                        # ISO format without timezone, add local timezone
+                        formatted_date="${custom_date}$(date '+%z' | sed 's/\(..\)\(..\)/+\1:\2/')"
+                    elif [[ "$custom_date" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}\ [0-9]{2}:[0-9]{2}:[0-9]{2}$ ]]; then
+                        # Space-separated format, convert to ISO and add timezone
+                        iso_date=$(echo "$custom_date" | sed 's/ /T/')
+                        formatted_date="${iso_date}$(date '+%z' | sed 's/\(..\)\(..\)/+\1:\2/')"
+                    else
+                        formatted_date="$custom_date"
+                    fi
+                    
+                    export GIT_AUTHOR_DATE="$formatted_date"
+                    export GIT_COMMITTER_DATE="$formatted_date"
+                    
+                    echo "✅ Custom date set:"
+                    echo "   GIT_AUTHOR_DATE=$GIT_AUTHOR_DATE"
+                    echo "   GIT_COMMITTER_DATE=$GIT_COMMITTER_DATE"
+                    echo ""
+                else
+                    echo "⚠️  Invalid date format. Using current time instead."
+                fi
+            else
+                echo "📅 No date provided, using current time."
+            fi
+            ;;
+        *)
+            echo "📅 Using current time for commit."
+            ;;
+    esac
+}
+
+# Prompt for custom date first
+prompt_for_custom_date
 
 # Check if TODO check should be skipped
 if [[ "$SKIP_TODO_CHECK" == "1" ]]; then

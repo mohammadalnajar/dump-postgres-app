@@ -544,6 +544,53 @@ npm run dev
 
 ---
 
+## 🪝 Git Hooks & Custom Commit Dates
+
+This project includes enhanced git hooks with custom commit date functionality. The pre-commit hook provides:
+
+### **Features**
+- **📅 Custom Date/Time Prompt**: Optionally set custom `GIT_AUTHOR_DATE` and `GIT_COMMITTER_DATE` for commits
+- **🔍 TODO Tracking**: Warns about TODO comments in code files before committing
+- **⚡ Smart Bypassing**: Multiple environment variables for selective feature skipping
+
+### **Quick Start**
+```bash
+# Setup hooks (automatic with npm install)
+npm run setup:hooks
+
+# Normal commit (will prompt for custom date and check TODOs)
+git commit -m "Add new feature"
+
+# Use custom date when prompted:
+# Examples: 2025-09-24 08:51:20
+#          2025-09-24T08:51:20+02:00
+```
+
+### **Bypass Options**
+```bash
+# Skip all hooks
+git commit --no-verify -m "Emergency fix"
+
+# Skip only date prompt (still checks TODOs)  
+SKIP_DATE_PROMPT=1 git commit -m "Quick fix"
+
+# Skip only TODO check (still prompts for date)
+SKIP_TODO_CHECK=1 git commit -m "Feature with TODOs"
+
+# Skip both
+SKIP_DATE_PROMPT=1 SKIP_TODO_CHECK=1 git commit -m "Fast commit"
+```
+
+### **Use Cases for Custom Dates**
+- **Backdating commits** for proper chronological order
+- **Batch commits** with specific timestamps  
+- **Time zone adjustments** for distributed teams
+- **Historical reconstruction** of development timeline
+
+> **📚 Documentation**: See [`docs/GIT_HOOKS_GUIDE.md`](docs/GIT_HOOKS_GUIDE.md) for complete setup and usage guide.
+
+---
+
 ## Roadmap (optional ideas)
 
 - Saved “connection profiles” with encrypted secrets  
