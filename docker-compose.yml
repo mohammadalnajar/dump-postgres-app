@@ -24,9 +24,20 @@ services:
             APP_BASE_PATH: ${APP_BASE_PATH:-/}
             APP_TITLE: ${APP_TITLE:-Postgres Dump App}
 
-            # Security settings
+            # Authentication Configuration (CRITICAL - MISSING VARIABLES)
+            USE_SESSION_AUTH: ${USE_SESSION_AUTH:-true}
+            AUTH_USERNAME: ${AUTH_USERNAME}
+            AUTH_PASSWORD: ${AUTH_PASSWORD}
+            SESSION_SECRET: ${SESSION_SECRET}
+
+            # Cron encryption (CRITICAL - MISSING)
+            CRON_ENCRYPTION_KEY: ${CRON_ENCRYPTION_KEY}
+
+            # Legacy Basic Auth (fallback)
             BASIC_AUTH_USER: ${BASIC_AUTH_USER}
             BASIC_AUTH_PASS: ${BASIC_AUTH_PASS}
+
+            # Security settings
             RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
             RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-20}
 
@@ -43,6 +54,10 @@ services:
 
             # File retention
             AUTO_CLEAN_DAYS: ${AUTO_CLEAN_DAYS}
+
+            # Optional production settings
+            TZ: ${TZ:-UTC}
+            TRUST_PROXY: ${TRUST_PROXY:-false}
 
             NODE_ENV: production
         volumes:
