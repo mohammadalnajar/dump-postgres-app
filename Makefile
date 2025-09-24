@@ -115,3 +115,32 @@ backup-clean:
 	@echo "Cleaning old backup files..."
 	@find backups/ -name "*.sql*" -type f -mtime +7 -delete 2>/dev/null || true
 	@echo "Old backups cleaned (older than 7 days)"
+
+# =========================
+# TODO MANAGEMENT
+# =========================
+todos:
+	@echo "📋 Scanning for TODOs in codebase..."
+	@bash scripts/scan-todos.sh
+
+plan:
+	@echo "📋 Opening planning files..."
+	@code TODO.md JOURNAL.md
+
+todo-stats:
+	@echo "📊 TODO Statistics:"
+	@echo "-------------------"
+	@# Count unchecked TODOs in each priority section
+	@high_count=$$(sed -n '/## 🔥.*High Priority/,/^## /p' TODO.md | grep -c '^- \[ \]' 2>/dev/null || echo 0); \
+	medium_count=$$(sed -n '/## 🟡.*Medium Priority/,/^## /p' TODO.md | grep -c '^- \[ \]' 2>/dev/null || echo 0); \
+	low_count=$$(sed -n '/## 🟢.*Low Priority/,/^## /p' TODO.md | grep -c '^- \[ \]' 2>/dev/null || echo 0); \
+	completed_count=$$(grep -c -E '^- \[x\]' TODO.md 2>/dev/null || echo 0); \
+	code_todos=$$(grep -r --include="*.js" --exclude="*test*" -E '//.*TODO|//.*FIXME|//.*HACK' . 2>/dev/null | wc -l | xargs); \
+	total_pending=$$(( high_count + medium_count + low_count )); \
+	echo "High Priority TODOs: $$high_count"; \
+	echo "Medium Priority TODOs: $$medium_count"; \
+	echo "Low Priority TODOs: $$low_count"; \
+	echo "Total Pending: $$total_pending"; \
+	echo "Completed TODOs: $$completed_count"; \
+	echo "-------------------"; \
+	echo "In-code TODOs: $$code_todos"
