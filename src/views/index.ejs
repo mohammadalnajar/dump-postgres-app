@@ -7,290 +7,1162 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title><%= title %></title>
     <link rel="stylesheet" href="/style.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+            background: #0f172a;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        .dashboard-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: 280px;
+            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+            border-right: 1px solid rgba(148, 163, 184, 0.1);
+            position: fixed;
+            height: 100vh;
+            left: 0;
+            top: 0;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .sidebar.collapsed {
+            transform: translateX(-280px);
+        }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        .app-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .app-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .app-icon::before {
+            content: '💾';
+            font-size: 18px;
+        }
+
+        .app-title {
+            color: #f1f5f9;
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .sidebar-nav {
+            padding: 1rem 0;
+        }
+
+        .nav-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .nav-section-title {
+            color: #64748b;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 0 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1.5rem;
+            color: #cbd5e1;
+            text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+        }
+
+        .nav-item:hover {
+            background: rgba(148, 163, 184, 0.1);
+            color: #f1f5f9;
+        }
+
+        .nav-item.active {
+            background: linear-gradient(90deg, rgba(59, 130, 246, 0.15) 0%, transparent 100%);
+            color: #93c5fd;
+            border-right: 3px solid #3b82f6;
+        }
+
+        .nav-item-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .user-section {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 1.5rem;
+            border-top: 1px solid rgba(148, 163, 184, 0.1);
+            background: rgba(15, 23, 42, 0.5);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .logout-btn {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .logout-btn:hover {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            min-height: 100vh;
+            background: #0f172a;
+        }
+
+        .main-content.expanded {
+            margin-left: 0;
+        }
+
+        .main-header {
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: #cbd5e1;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .mobile-menu-btn:hover {
+            background: rgba(148, 163, 184, 0.1);
+            color: #f1f5f9;
+        }
+
+        .page-title {
+            color: #f1f5f9;
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .page-subtitle {
+            color: #64748b;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+
+        .main-body {
+            padding: 2rem;
+            max-width: 1400px;
+        }
+
+        /* Content Sections */
+        .content-section {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Card Styles */
+        .card {
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .card-title {
+            color: #f1f5f9;
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0 0 0.5rem 0;
+        }
+
+        .card-description {
+            color: #64748b;
+            font-size: 0.875rem;
+            margin: 0;
+        }
+
+        /* Enhanced Form Styles */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            color: #e2e8f0;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-group input,
+        .form-group select {
+            padding: 0.875rem 1rem;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 10px;
+            color: #f1f5f9;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+            outline: none;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: #3b82f6;
+            background: rgba(15, 23, 42, 0.9);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-group input::placeholder {
+            color: #64748b;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin: 1rem 0;
+        }
+
+        .custom-checkbox {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .custom-checkbox input[type="checkbox"] {
+            opacity: 0;
+            position: absolute;
+            width: 20px;
+            height: 20px;
+        }
+
+        .checkbox-indicator {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(148, 163, 184, 0.3);
+            border-radius: 4px;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .custom-checkbox input:checked + .checkbox-indicator {
+            background: #3b82f6;
+            border-color: #3b82f6;
+        }
+
+        .custom-checkbox input:checked + .checkbox-indicator::after {
+            content: '✓';
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        /* Button Styles */
+        .btn {
+            padding: 0.875rem 1.5rem;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            justify-content: center;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(148, 163, 184, 0.1);
+            color: #cbd5e1;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(148, 163, 184, 0.2);
+            color: #f1f5f9;
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+
+        .btn-small {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.8rem;
+        }
+
+        /* Table Styles */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+
+        .data-table th {
+            background: rgba(30, 41, 59, 0.8);
+            color: #94a3b8;
+            font-weight: 600;
+            font-size: 0.875rem;
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        .data-table td {
+            padding: 1rem;
+            color: #e2e8f0;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.05);
+        }
+
+        .data-table tr:hover {
+            background: rgba(148, 163, 184, 0.05);
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+
+        .status-enabled {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .status-disabled {
+            background: rgba(107, 114, 128, 0.2);
+            color: #9ca3af;
+            border: 1px solid rgba(107, 114, 128, 0.3);
+        }
+
+        .status-success {
+            color: #34d399;
+        }
+
+        .status-error {
+            color: #f87171;
+        }
+
+        /* Message Styles */
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .alert-success {
+            background: rgba(16, 185, 129, 0.1);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .alert-success::before {
+            content: '✓';
+            font-size: 1.2rem;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-280px);
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .mobile-menu-btn {
+                display: block;
+            }
+
+            .main-body {
+                padding: 1rem;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .card {
+                padding: 1.5rem;
+            }
+        }
+
+        /* Custom scrollbar */
+        .sidebar::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.3);
+            border-radius: 2px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(148, 163, 184, 0.5);
+        }
+
+        /* Format info styles */
+        .format-info {
+            display: none;
+            padding: 1rem;
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 10px;
+            margin-top: 0.75rem;
+            font-size: 0.875rem;
+            color: #94a3b8;
+        }
+
+        .format-info.show {
+            display: block;
+        }
+
+        .cron-description {
+            margin-top: 0.75rem;
+            padding: 0.75rem;
+            border-radius: 8px;
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            font-size: 0.875rem;
+        }
+
+        .helper-text {
+            color: #64748b;
+            font-size: 0.8rem;
+            margin-top: 0.5rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: #64748b;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+    </style>
 </head>
 
-<body>
-    <main class="container">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-            <h1><%= title %></h1>
-            <form method="POST" action="/logout" style="margin: 0;">
-                <button type="submit" style="background: #dc3545; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">
-                    Logout
-                </button>
-            </form>
-        </div>
-
-        <form method="POST" action="/backup" id="backupForm">
-            <!-- Cron Job Configuration -->
-            <fieldset id="cronJobSection" style="display: none;">
-                <legend>Schedule Backup Job</legend>
-                <div class="grid">
-                    <label>Job Name <input name="jobName" placeholder="My backup job" /></label>
-                    <label>Schedule
-                        <select name="cronPreset" id="cronPreset">
-                            <% predefinedPatterns.forEach(pattern => { %>
-                            <option value="<%= pattern.value %>"><%= pattern.label %></option>
-                            <% }) %>
-                        </select>
-                    </label>
+<<body>
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="app-brand">
+                    <div class="app-icon"></div>
+                    <h1 class="app-title"><%= title %></h1>
                 </div>
-                <div id="customCronPattern" style="display: none;">
-                    <label>Custom Cron Pattern
-                        <input name="cronPattern" placeholder="0 0 * * *" />
-                        <small>Format: minute hour day month weekday</small>
-                    </label>
-                    <div id="cronDescription" style="margin-top: 0.5rem; color: #666; font-size: 0.9rem;"></div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Main</div>
+                    <button class="nav-item active" data-section="create-backup">
+                        <span class="nav-item-icon">🔄</span>
+                        Create Backup
+                    </button>
+                    <button class="nav-item" data-section="backup-files">
+                        <span class="nav-item-icon">📁</span>
+                        Backup Files
+                    </button>
+                    <button class="nav-item" data-section="scheduled-jobs">
+                        <span class="nav-item-icon">⏰</span>
+                        Scheduled Jobs
+                    </button>
                 </div>
-            </fieldset>
+            </nav>
 
-            <fieldset>
-                <legend>Connection</legend>
-                <div class="grid">
-                    <label>Host <input name="host" required placeholder="db.example.com" /></label>
-                    <label>Port <input name="port" type="number" min="1" max="65535" value="5432" /></label>
-                    <label>Database <input name="db" required placeholder="mydb" /></label>
-                    <label>User <input name="user" required placeholder="dbuser" /></label>
-                    <label>Password <input name="password" type="password" required placeholder="••••••••" /></label>
+            <div class="user-section">
+                <div class="user-info">
+                    <div class="user-avatar">A</div>
+                    <form method="POST" action="/logout" style="margin: 0;">
+                        <button type="submit" class="logout-btn">
+                            Logout
+                        </button>
+                    </form>
                 </div>
-            </fieldset>
+            </div>
+        </aside>
 
-            <fieldset>
-                <legend>Options</legend>
-                <div class="grid">
-                    <label>Format
-                        <select name="format">
-                            <option value="plain" <%= defaults.format==='plain'?'selected':'' %>>Plain (.sql)</option>
-                            <option value="custom" <%= defaults.format==='custom'?'selected':'' %>>Custom (.dump)
-                            </option>
-                            <option value="tar" <%= defaults.format==='tar'?'selected':'' %>>Tar (.tar)</option>
-                        </select>
-                    </label>
-
-                    <label>Output Style
-                        <select name="outputStyle" id="outputStyle">
-                            <option value="standard" <%= defaults.outputStyle==='standard'?'selected':'' %>>Standard pg_dump</option>
-                            <option value="navicat" <%= defaults.outputStyle==='navicat'?'selected':'' %>>Navicat-like</option>
-                        </select>
-                    </label>
-
-                    <label>Data Format (for Navicat style)
-                        <select name="insertFormat" id="insertFormat">
-                            <option value="copy" <%= defaults.insertFormat==='copy'?'selected':'' %>>COPY statements</option>
-                            <option value="inserts" <%= defaults.insertFormat==='inserts'?'selected':'' %>>INSERT statements</option>
-                        </select>
-                    </label>
-
-                    <label>Include owner?
-                        <select name="includeOwner">
-                            <option value="">Default</option>
-                            <option value="true" <%= defaults.includeOwner===true?'selected':'' %>>Yes</option>
-                            <option value="false" <%= defaults.includeOwner===false?'selected':'' %>>No</option>
-                        </select>
-                    </label>
-
-                    <label>Only schema (name)
-                        <input name="onlySchema" placeholder="public or schema_name"
-                            value="<%= defaults.onlySchema||'' %>" />
-                    </label>
-
-                    <label>Data only?
-                        <select name="onlyData">
-                            <option value="">No</option>
-                            <option value="true" <%= defaults.onlyData===true?'selected':'' %>>Yes</option>
-                        </select>
-                    </label>
-
-                    <label>Exclude schema
-                        <input name="excludeSchema" placeholder="information_schema"
-                            value="<%= defaults.excludeSchema||'' %>" />
-                    </label>
-
-                    <label>Compression level (0-9)
-                        <input name="compressLevel" type="number" min="0" max="9"
-                            value="<%= defaults.compressLevel ?? 0 %>" />
-                    </label>
-
-                    <label>Extra args
-                        <input name="extraArgs" placeholder="--no-privileges --column-inserts"
-                            value="<%= defaults.extraArgs||'' %>" />
-                    </label>
+        <!-- Main Content -->
+        <main class="main-content" id="mainContent">
+            <header class="main-header">
+                <div class="header-left">
+                    <button class="mobile-menu-btn" id="mobileMenuBtn">
+                        ☰
+                    </button>
+                    <div>
+                        <h1 class="page-title" id="pageTitle">Create Backup</h1>
+                        <p class="page-subtitle" id="pageSubtitle">Configure and create database backups</p>
+                    </div>
                 </div>
-            </fieldset>
+            </header>
 
-            <fieldset>
-                <legend>Actions</legend>
-                <div style="display: flex; gap: 1rem; align-items: center;">
-                    <label style="display: flex; align-items: center; gap: 0.5rem;">
-                        <input type="checkbox" id="enableCronJob" />
-                        Schedule as cron job
-                    </label>
-                </div>
-                <div style="margin-top: 1rem;">
-                    <button type="submit" id="submitBtn">Create Backup</button>
-                </div>
-            </fieldset>
-        </form>
+            <div class="main-body">
+                <% if (message) { %>
+                <div class="alert alert-success"><%= message %></div>
+                <% } %>
 
-        <% if (message) { %>
-        <div class="message"><%= message %></div>
-        <% } %>
+                <!-- Create Backup Section -->
+                <section class="content-section active" id="create-backup">
+                    <form method="POST" action="/backup" id="backupForm">
 
-        <section>
-            <h2>Backups</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>File</th>
-                        <th>Size</th>
-                        <th>Modified</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <% files.forEach(f => { %>
-                    <tr>
-                        <td><%= f.name %></td>
-                        <td><%= (f.size/1024/1024).toFixed(2) %> MB</td>
-                        <td><%= f.mtime.toLocaleString() %></td>
-                        <td class="actions">
-                            <a href="/download/<%= encodeURIComponent(f.name) %>">Download</a>
-                            <form method="POST" action="/delete/<%= encodeURIComponent(f.name) %>"
-                                style="display:inline" onsubmit="return confirm('Delete this file?')">
-                                <button type="submit">Delete</button>
-                            </form>
-                        </td>
-                    </tr>
-                    <% }) %>
-                </tbody>
-            </table>
-        </section>
+                        <!-- Database Connection -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h2 class="card-title">Database Connection</h2>
+                                <p class="card-description">Configure your PostgreSQL database connection</p>
+                            </div>
+                            
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Host</label>
+                                    <input name="host" required placeholder="db.example.com" />
+                                </div>
+                                <div class="form-group">
+                                    <label>Port</label>
+                                    <input name="port" type="number" min="1" max="65535" value="5432" />
+                                </div>
+                                <div class="form-group">
+                                    <label>Database</label>
+                                    <input name="db" required placeholder="mydb" />
+                                </div>
+                                <div class="form-group">
+                                    <label>Username</label>
+                                    <input name="user" required placeholder="dbuser" />
+                                </div>
+                                <div class="form-group">
+                                    <label>Password</label>
+                                    <input name="password" type="password" required placeholder="••••••••" />
+                                </div>
+                            </div>
+                        </div>
 
-        <section>
-            <h2>Scheduled Backup Jobs</h2>
-            <% if (cronJobs && cronJobs.length > 0) { %>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Schedule</th>
-                        <th>Database</th>
-                        <th>Status</th>
-                        <th>Last Run</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <% cronJobs.forEach(job => { %>
-                    <tr>
-                        <td><%= job.name %></td>
-                        <td>
-                            <code><%= job.cronPattern %></code>
-                            <br><small style="color: #666;"><%= job.cronPattern === '0 * * * *' ? 'Every hour' : 
-                                job.cronPattern === '0 0 * * *' ? 'Daily at midnight' :
-                                job.cronPattern === '*/5 * * * *' ? 'Every 5 minutes' :
-                                job.cronPattern === '*/10 * * * *' ? 'Every 10 minutes' :
-                                job.cronPattern === '*/30 * * * *' ? 'Every 30 minutes' :
-                                job.cronPattern === '0 */6 * * *' ? 'Every 6 hours' :
-                                job.cronPattern === '0 0 * * 0' ? 'Weekly on Sunday' :
-                                job.cronPattern === '0 0 1 * *' ? 'Monthly' :
-                                'Custom pattern' %></small>
-                        </td>
-                        <td><%= job.config.db %>@<%= job.config.host %></td>
-                        <td>
-                            <span class="status-badge status-<%= job.enabled ? 'enabled' : 'disabled' %>">
-                                <%= job.enabled ? 'Enabled' : 'Disabled' %>
-                            </span>
-                        </td>
-                        <td>
-                            <% if (job.lastRun) { %>
-                                <%= new Date(job.lastRun).toLocaleString() %>
-                                <br><small class="status-<%= job.lastStatus %>">
-                                    <%= job.lastStatus === 'success' ? '✓' : '✗' %> <%= job.lastStatus %>
-                                </small>
-                            <% } else { %>
-                                <em>Never</em>
-                            <% } %>
-                        </td>
-                        <td class="actions">
-                            <form method="POST" action="/cron-jobs/<%= job.id %>/toggle" style="display:inline">
-                                <button type="submit" class="btn-small">
-                                    <%= job.enabled ? 'Disable' : 'Enable' %>
+                        <!-- Backup Options -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h2 class="card-title">Backup Options</h2>
+                                <p class="card-description">Customize your backup configuration</p>
+                            </div>
+                            
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Format</label>
+                                    <select name="format">
+                                        <option value="plain" <%= defaults.format==='plain'?'selected':'' %>>Plain (.sql)</option>
+                                        <option value="custom" <%= defaults.format==='custom'?'selected':'' %>>Custom (.dump)</option>
+                                        <option value="tar" <%= defaults.format==='tar'?'selected':'' %>>Tar (.tar)</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Output Style</label>
+                                    <select name="outputStyle" id="outputStyle">
+                                        <option value="standard" <%= defaults.outputStyle==='standard'?'selected':'' %>>Standard pg_dump</option>
+                                        <option value="navicat" <%= defaults.outputStyle==='navicat'?'selected':'' %>>Navicat-like</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Data Format (for Navicat style)</label>
+                                    <select name="insertFormat" id="insertFormat">
+                                        <option value="copy" <%= defaults.insertFormat==='copy'?'selected':'' %>>COPY statements</option>
+                                        <option value="inserts" <%= defaults.insertFormat==='inserts'?'selected':'' %>>INSERT statements</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Include Owner</label>
+                                    <select name="includeOwner">
+                                        <option value="">Default</option>
+                                        <option value="true" <%= defaults.includeOwner===true?'selected':'' %>>Yes</option>
+                                        <option value="false" <%= defaults.includeOwner===false?'selected':'' %>>No</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Schema Only</label>
+                                    <input name="onlySchema" placeholder="public or schema_name" value="<%= defaults.onlySchema||'' %>" />
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Data Only</label>
+                                    <select name="onlyData">
+                                        <option value="">No</option>
+                                        <option value="true" <%= defaults.onlyData===true?'selected':'' %>>Yes</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Exclude Schema</label>
+                                    <input name="excludeSchema" placeholder="information_schema" value="<%= defaults.excludeSchema||'' %>" />
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Compression Level (0-9)</label>
+                                    <input name="compressLevel" type="number" min="0" max="9" value="<%= defaults.compressLevel ?? 0 %>" />
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Extra Arguments</label>
+                                    <input name="extraArgs" placeholder="--no-privileges --column-inserts" value="<%= defaults.extraArgs||'' %>" />
+                                </div>
+                            </div>
+                        </div>
+
+                                                <!-- Schedule Configuration (Hidden by default) -->
+                        <div class="card" id="cronJobCard" style="display: none;">
+                            <div class="card-header">
+                                <h2 class="card-title">Schedule Configuration</h2>
+                                <p class="card-description">Set up automated backup scheduling</p>
+                            </div>
+                            
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Job Name</label>
+                                    <input name="jobName" placeholder="My backup job" />
+                                </div>
+                                <div class="form-group">
+                                    <label>Schedule Preset</label>
+                                    <select name="cronPreset" id="cronPreset">
+                                        <% predefinedPatterns.forEach(pattern => { %>
+                                        <option value="<%= pattern.value %>"><%= pattern.label %></option>
+                                        <% }) %>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div id="customCronPattern" style="display: none;">
+                                <div class="form-group">
+                                    <label>Custom Cron Pattern</label>
+                                    <input name="cronPattern" placeholder="0 0 * * *" />
+                                    <div class="helper-text">Format: minute hour day month weekday</div>
+                                </div>
+                                <div id="cronDescription" class="cron-description"></div>
+                            </div>
+                        </div>
+
+
+                        <!-- Actions -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h2 class="card-title">Actions</h2>
+                                <p class="card-description">Choose how to execute the backup</p>
+                            </div>
+                            
+                            <div class="checkbox-group">
+                                <label class="custom-checkbox">
+                                    <input type="checkbox" id="enableCronJob" />
+                                    <span class="checkbox-indicator"></span>
+                                </label>
+                                <span>Schedule as cron job</span>
+                            </div>
+                            
+                            <div style="margin-top: 2rem;">
+                                <button type="submit" class="btn btn-primary" id="submitBtn">
+                                    <span>🔄</span>
+                                    Create Backup
                                 </button>
-                            </form>
-                            <form method="POST" action="/cron-jobs/<%= job.id %>/delete" 
-                                  style="display:inline" 
-                                  onsubmit="return confirm('Delete this cron job?')">
-                                <button type="submit" class="btn-small btn-danger">Delete</button>
-                            </form>
-                        </td>
-                    </tr>
-                    <% }) %>
-                </tbody>
-            </table>
-            <% } else { %>
-            <p>No scheduled backup jobs configured. Create a backup with "Schedule as cron job" enabled to add one.</p>
-            <% } %>
-        </section>
-    </main>
+                            </div>
+                        </div>
+                    </form>
+                </section>
+
+                <!-- Backup Files Section -->
+                <section class="content-section" id="backup-files">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Backup Files</h2>
+                            <p class="card-description">Manage your backup files</p>
+                        </div>
+                        
+                        <% if (files && files.length > 0) { %>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>File Name</th>
+                                    <th>Size</th>
+                                    <th>Modified</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% files.forEach(f => { %>
+                                <tr>
+                                    <td>
+                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <span>📄</span>
+                                            <%= f.name %>
+                                        </div>
+                                    </td>
+                                    <td><%= (f.size/1024/1024).toFixed(2) %> MB</td>
+                                    <td><%= f.mtime.toLocaleString() %></td>
+                                    <td>
+                                        <div style="display: flex; gap: 0.5rem;">
+                                            <a href="/download/<%= encodeURIComponent(f.name) %>" class="btn btn-secondary btn-small">
+                                                <span>⬇️</span>
+                                                Download
+                                            </a>
+                                            <form method="POST" action="/delete/<%= encodeURIComponent(f.name) %>" 
+                                                  style="display:inline" 
+                                                  onsubmit="return confirm('Delete this file?')">
+                                                <button type="submit" class="btn btn-danger btn-small">
+                                                    <span>🗑️</span>
+                                                    Delete
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                        <% } else { %>
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📁</div>
+                            <h3>No backup files</h3>
+                            <p>Create your first backup to see files here.</p>
+                        </div>
+                        <% } %>
+                    </div>
+                </section>
+
+                <!-- Scheduled Jobs Section -->
+                <section class="content-section" id="scheduled-jobs">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Scheduled Backup Jobs</h2>
+                            <p class="card-description">Manage your automated backup jobs</p>
+                        </div>
+                        
+                        <% if (cronJobs && cronJobs.length > 0) { %>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Job Name</th>
+                                    <th>Schedule</th>
+                                    <th>Database</th>
+                                    <th>Status</th>
+                                    <th>Last Run</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% cronJobs.forEach(job => { %>
+                                <tr>
+                                    <td>
+                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <span>⏰</span>
+                                            <%= job.name %>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <code style="background: rgba(59, 130, 246, 0.1); padding: 0.25rem 0.5rem; border-radius: 4px; color: #93c5fd;">
+                                            <%= job.cronPattern %>
+                                        </code>
+                                        <br>
+                                        <small style="color: #64748b;">
+                                            <%= job.cronPattern === '0 * * * *' ? 'Every hour' : 
+                                                job.cronPattern === '0 0 * * *' ? 'Daily at midnight' :
+                                                job.cronPattern === '*/5 * * * *' ? 'Every 5 minutes' :
+                                                job.cronPattern === '*/10 * * * *' ? 'Every 10 minutes' :
+                                                job.cronPattern === '*/30 * * * *' ? 'Every 30 minutes' :
+                                                job.cronPattern === '0 */6 * * *' ? 'Every 6 hours' :
+                                                job.cronPattern === '0 0 * * 0' ? 'Weekly on Sunday' :
+                                                job.cronPattern === '0 0 1 * *' ? 'Monthly' :
+                                                'Custom pattern' %>
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <div><%= job.config.db %></div>
+                                            <small style="color: #64748b;"><%= job.config.host %></small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="status-badge status-<%= job.enabled ? 'enabled' : 'disabled' %>">
+                                            <%= job.enabled ? 'Enabled' : 'Disabled' %>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <% if (job.lastRun) { %>
+                                            <div><%= new Date(job.lastRun).toLocaleString() %></div>
+                                            <small class="status-<%= job.lastStatus %>">
+                                                <%= job.lastStatus === 'success' ? '✓' : '✗' %> <%= job.lastStatus %>
+                                            </small>
+                                        <% } else { %>
+                                            <em style="color: #64748b;">Never</em>
+                                        <% } %>
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; gap: 0.5rem;">
+                                            <form method="POST" action="/cron-jobs/<%= job.id %>/toggle" style="display:inline">
+                                                <button type="submit" class="btn btn-secondary btn-small">
+                                                    <%= job.enabled ? '⏸️' : '▶️' %>
+                                                    <%= job.enabled ? 'Disable' : 'Enable' %>
+                                                </button>
+                                            </form>
+                                            <form method="POST" action="/cron-jobs/<%= job.id %>/delete" 
+                                                  style="display:inline" 
+                                                  onsubmit="return confirm('Delete this cron job?')">
+                                                <button type="submit" class="btn btn-danger btn-small">
+                                                    <span>🗑️</span>
+                                                    Delete
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                        <% } else { %>
+                        <div class="empty-state">
+                            <div class="empty-state-icon">⏰</div>
+                            <h3>No scheduled jobs</h3>
+                            <p>Create a backup with "Schedule as cron job" enabled to add automated jobs.</p>
+                        </div>
+                        <% } %>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
 
     <script>
+        // Navigation and UI Management
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+            const navItems = document.querySelectorAll('.nav-item');
+            const contentSections = document.querySelectorAll('.content-section');
+            const pageTitle = document.getElementById('pageTitle');
+            const pageSubtitle = document.getElementById('pageSubtitle');
+
+            // Section configuration
+            const sections = {
+                'create-backup': {
+                    title: 'Create Backup',
+                    subtitle: 'Configure and create database backups'
+                },
+                'backup-files': {
+                    title: 'Backup Files',
+                    subtitle: 'Manage and download your backup files'
+                },
+                'scheduled-jobs': {
+                    title: 'Scheduled Jobs',
+                    subtitle: 'Manage automated backup schedules'
+                }
+            };
+
+            // Mobile menu toggle
+            if (mobileMenuBtn) {
+                mobileMenuBtn.addEventListener('click', function() {
+                    sidebar.classList.toggle('open');
+                });
+            }
+
+            // Navigation handling
+            navItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    const targetSection = this.dataset.section;
+                    
+                    // Update active nav item
+                    navItems.forEach(nav => nav.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update content sections
+                    contentSections.forEach(section => section.classList.remove('active'));
+                    const targetElement = document.getElementById(targetSection);
+                    if (targetElement) {
+                        targetElement.classList.add('active');
+                    }
+                    
+                    // Update page title
+                    if (sections[targetSection]) {
+                        pageTitle.textContent = sections[targetSection].title;
+                        pageSubtitle.textContent = sections[targetSection].subtitle;
+                    }
+                    
+                    // Close mobile menu
+                    sidebar.classList.remove('open');
+                });
+            });
+
+            // Close mobile menu when clicking outside
+            document.addEventListener('click', function(e) {
+                if (window.innerWidth <= 768 && 
+                    !sidebar.contains(e.target) && 
+                    !mobileMenuBtn.contains(e.target)) {
+                    sidebar.classList.remove('open');
+                }
+            });
+
+            // Initialize form functionality
+            initializeFormHandling();
+        });
+
+        // Form handling functions
+        function initializeFormHandling() {
+            const enableCronJob = document.getElementById('enableCronJob');
+            const outputStyle = document.getElementById('outputStyle');
+            const cronPreset = document.getElementById('cronPreset');
+            const cronPatternInput = document.querySelector('input[name="cronPattern"]');
+
+            // Add event listeners
+            if (outputStyle) {
+                outputStyle.addEventListener('change', toggleFormatOptions);
+            }
+            
+            if (enableCronJob) {
+                enableCronJob.addEventListener('change', toggleCronJobSection);
+            }
+            
+            if (cronPreset) {
+                cronPreset.addEventListener('change', toggleCustomCronPattern);
+            }
+            
+            // Debounced validation for custom cron pattern
+            if (cronPatternInput) {
+                let cronValidationTimeout;
+                cronPatternInput.addEventListener('input', function() {
+                    clearTimeout(cronValidationTimeout);
+                    cronValidationTimeout = setTimeout(validateCronPattern, 500);
+                });
+            }
+
+            // Form submission handling
+            const backupForm = document.getElementById('backupForm');
+            if (backupForm) {
+                backupForm.addEventListener('submit', function() {
+                    const submitBtn = document.getElementById('submitBtn');
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span>⏳</span> Processing...';
+                    
+                    // Re-enable after timeout
+                    setTimeout(() => {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<span>🔄</span> Create Backup';
+                    }, 10000);
+                });
+            }
+            
+            // Initialize states
+            toggleFormatOptions();
+            toggleCronJobSection();
+            toggleCustomCronPattern();
+        }
+
         // Show/hide options based on output style
         function toggleFormatOptions() {
-            const outputStyle = document.getElementById('outputStyle').value;
-            const insertFormatLabel = document.querySelector('label:has(#insertFormat)');
+            const outputStyle = document.getElementById('outputStyle');
+            const insertFormatGroup = document.querySelector('.form-group:has(#insertFormat)');
             const formatSelect = document.querySelector('select[name="format"]');
-            const compressLabel = document.querySelector('label:has(input[name="compressLevel"])');
+            const compressGroup = document.querySelector('.form-group:has(input[name="compressLevel"])');
             
-            if (outputStyle === 'navicat') {
-                insertFormatLabel.style.display = 'block';
-                // Disable format selection for Navicat style (always uses plain)
-                formatSelect.disabled = true;
-                formatSelect.value = 'plain';
-                compressLabel.style.display = 'none';
+            if (!outputStyle) return;
+            
+            if (outputStyle.value === 'navicat') {
+                if (insertFormatGroup) insertFormatGroup.style.display = 'block';
+                if (formatSelect) {
+                    formatSelect.disabled = true;
+                    formatSelect.value = 'plain';
+                }
+                if (compressGroup) compressGroup.style.display = 'none';
             } else {
-                insertFormatLabel.style.display = 'none';
-                formatSelect.disabled = false;
-                compressLabel.style.display = 'block';
+                if (insertFormatGroup) insertFormatGroup.style.display = 'none';
+                if (formatSelect) formatSelect.disabled = false;
+                if (compressGroup) compressGroup.style.display = 'block';
             }
         }
 
         // Handle cron job checkbox
         function toggleCronJobSection() {
-            console.log('toggleCronJobSection called');
             const checkbox = document.getElementById('enableCronJob');
-            const cronSection = document.getElementById('cronJobSection');
+            const cronCard = document.getElementById('cronJobCard');
             const submitBtn = document.getElementById('submitBtn');
-            const form = document.getElementById('backupForm'); // Use specific form ID
+            const form = document.getElementById('backupForm');
             const jobNameInput = document.querySelector('input[name="jobName"]');
             
-            console.log('Checkbox element:', checkbox);
-            console.log('Checkbox checked:', checkbox ? checkbox.checked : 'null');
-            console.log('Cron section:', cronSection);
-            console.log('Form element:', form);
-            console.log('Current form action:', form ? form.action : 'null');
-            
-            if (!checkbox || !cronSection || !submitBtn || !form) {
-                console.error('Missing required elements for cron job toggle');
-                return;
-            }
+            if (!checkbox || !cronCard || !submitBtn || !form) return;
             
             if (checkbox.checked) {
-                console.log('Showing cron job section');
-                cronSection.style.display = 'block';
-                submitBtn.textContent = 'Create Scheduled Backup Job';
+                cronCard.style.display = 'block';
+                submitBtn.innerHTML = '<span>⏰</span> Create Scheduled Job';
                 form.action = '/cron-jobs';
-                console.log('Form action changed to:', form.action);
-                // Make cron job fields required
                 if (jobNameInput) {
                     jobNameInput.required = true;
                 }
             } else {
-                console.log('Hiding cron job section');
-                cronSection.style.display = 'none';
-                submitBtn.textContent = 'Create Backup';
+                cronCard.style.display = 'none';
+                submitBtn.innerHTML = '<span>🔄</span> Create Backup';
                 form.action = '/backup';
-                console.log('Form action changed to:', form.action);
-                // Remove required from cron job fields
                 if (jobNameInput) {
                     jobNameInput.required = false;
                 }
@@ -299,15 +1171,18 @@
 
         // Handle cron preset selection
         function toggleCustomCronPattern() {
-            const preset = document.getElementById('cronPreset').value;
+            const preset = document.getElementById('cronPreset');
             const customSection = document.getElementById('customCronPattern');
+            const patternInput = document.querySelector('input[name="cronPattern"]');
             
-            if (preset === 'custom') {
+            if (!preset || !customSection) return;
+            
+            if (preset.value === 'custom') {
                 customSection.style.display = 'block';
-                document.querySelector('input[name="cronPattern"]').required = true;
+                if (patternInput) patternInput.required = true;
             } else {
                 customSection.style.display = 'none';
-                document.querySelector('input[name="cronPattern"]').required = false;
+                if (patternInput) patternInput.required = false;
             }
         }
 
@@ -315,10 +1190,14 @@
         async function validateCronPattern() {
             const patternInput = document.querySelector('input[name="cronPattern"]');
             const descriptionDiv = document.getElementById('cronDescription');
+            
+            if (!patternInput || !descriptionDiv) return;
+            
             const pattern = patternInput.value.trim();
             
             if (!pattern) {
                 descriptionDiv.textContent = '';
+                patternInput.style.borderColor = '';
                 return;
             }
             
@@ -334,71 +1213,29 @@
                 const result = await response.json();
                 
                 if (result.valid) {
-                    descriptionDiv.innerHTML = `<span style="color: green;">✓ ${result.description}</span>`;
-                    patternInput.style.borderColor = 'green';
+                    descriptionDiv.innerHTML = `<span style="color: #34d399;">✓ ${result.description}</span>`;
+                    patternInput.style.borderColor = '#34d399';
                 } else {
-                    descriptionDiv.innerHTML = `<span style="color: red;">✗ ${result.description}</span>`;
-                    patternInput.style.borderColor = 'red';
+                    descriptionDiv.innerHTML = `<span style="color: #f87171;">✗ ${result.description}</span>`;
+                    patternInput.style.borderColor = '#f87171';
                 }
             } catch (error) {
-                descriptionDiv.innerHTML = `<span style="color: orange;">Unable to validate pattern</span>`;
+                descriptionDiv.innerHTML = `<span style="color: #fbbf24;">⚠ Unable to validate pattern</span>`;
+                patternInput.style.borderColor = '#fbbf24';
             }
         }
-        // Initialize on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM Content Loaded');
+
+        // Handle responsive behavior
+        function handleResize() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
             
-            // Check if elements exist
-            const enableCronJob = document.getElementById('enableCronJob');
-            const outputStyle = document.getElementById('outputStyle');
-            const cronPreset = document.getElementById('cronPreset');
-            const cronPatternInput = document.querySelector('input[name="cronPattern"]');
-            
-            console.log('enableCronJob element:', enableCronJob);
-            console.log('outputStyle element:', outputStyle);
-            console.log('cronPreset element:', cronPreset);
-            
-            // Add event listeners only if elements exist
-            if (outputStyle) {
-                outputStyle.addEventListener('change', toggleFormatOptions);
+            if (window.innerWidth > 768) {
+                sidebar.classList.remove('open');
             }
-            
-            if (enableCronJob) {
-                enableCronJob.addEventListener('change', function() {
-                    console.log('Checkbox changed, checked:', this.checked);
-                    toggleCronJobSection();
-                });
-            }
-            
-            if (cronPreset) {
-                cronPreset.addEventListener('change', toggleCustomCronPattern);
-            }
-            
-            // Debounced validation for custom cron pattern
-            if (cronPatternInput) {
-                let cronValidationTimeout;
-                cronPatternInput.addEventListener('input', function() {
-                    clearTimeout(cronValidationTimeout);
-                    cronValidationTimeout = setTimeout(validateCronPattern, 500);
-                });
-            }
-            
-            // Add form submission debugging
-            const backupForm = document.getElementById('backupForm');
-            if (backupForm) {
-                backupForm.addEventListener('submit', function(e) {
-                    console.log('Form submitted!');
-                    console.log('Form action:', this.action);
-                    console.log('Checkbox checked:', document.getElementById('enableCronJob').checked);
-                    // Don't prevent default, let form submit normally
-                });
-            }
-            
-            // Initialize states
-            toggleFormatOptions();
-            toggleCronJobSection();
-            toggleCustomCronPattern();
-        });
+        }
+
+        window.addEventListener('resize', handleResize);
     </script>
 </body>
 
