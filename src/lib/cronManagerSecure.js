@@ -32,7 +32,7 @@ function encrypt(text) {
 
     try {
         const iv = crypto.randomBytes(16);
-        const cipher = crypto.createCipher(ALGORITHM, Buffer.from(ENCRYPTION_KEY, 'hex'));
+        const cipher = crypto.createCipheriv(ALGORITHM, Buffer.from(ENCRYPTION_KEY, 'hex'), iv);
 
         let encrypted = cipher.update(text, 'utf8', 'hex');
         encrypted += cipher.final('hex');
@@ -59,7 +59,11 @@ function decrypt(encryptedData) {
     }
 
     try {
-        const decipher = crypto.createDecipher(ALGORITHM, Buffer.from(ENCRYPTION_KEY, 'hex'));
+        const decipher = crypto.createDecipheriv(
+            ALGORITHM,
+            Buffer.from(ENCRYPTION_KEY, 'hex'),
+            Buffer.from(encryptedData.iv, 'hex')
+        );
         decipher.setAuthTag(Buffer.from(encryptedData.authTag, 'hex'));
 
         let decrypted = decipher.update(encryptedData.encrypted, 'hex', 'utf8');
