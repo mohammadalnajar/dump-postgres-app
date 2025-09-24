@@ -2,7 +2,34 @@
 
 ## Overview
 
-The backup cleanup feature automatically manages old backup files based on configurable retention policies. This helps prevent disk space issues and keeps the backup directory organized.
+The backup cleanup feature automatically manages old backup files based on configurable retention policies with **job-specific isolation**. This prevents conflicts between different backup sources and ensures each cron job only affects its own backup files.
+
+## Key Improvement: Job-Specific File Isolation
+
+### **Problem Solved**
+Previously, all backup files from the same database would be affected by any cleanup policy, regardless of which job created them. This meant:
+- Multiple cron jobs for the same database would interfere with each other
+- Manual backups could be deleted by automated cleanup
+- No way to have different retention policies for different backup schedules
+
+### **Solution: Job-Scoped Backup Management**
+
+#### **1. Enhanced Filename Structure**
+- **Manual Backups**: `{database}_{timestamp}.{ext}` (unchanged for compatibility)  
+- **Cron Job Backups**: `{database}_{job-name}_{timestamp}.{ext}` (NEW)
+
+**Example:**
+```
+Manual backup:     verceldb_20250924_180800.sql
+Cron job "daily":  verceldb_daily_20250924_180800.sql  
+Cron job "hourly": verceldb_hourly_20250924_180800.sql
+```
+
+#### **2. Job-Specific Cleanup**
+Each cron job's cleanup policy **only affects its own backup files**:
+- Uses pattern matching: `{database}_{job-name}_*`
+- Manual backups are never affected by automated cleanup
+- Different jobs can have completely different retention policies
 
 ## Features
 
@@ -21,131 +48,127 @@ The backup cleanup feature automatically manages old backup files based on confi
 - **Retention Count**: 1-1000 files (default: 10)
 
 ### 4. **Safety Features**
-- Non-destructive preview mode
-- File type validation (only deletes backup files)
-- Error handling and reporting
-- Confirmation dialogs for manual cleanup
+- **Job isolation**: Each job only cleans its own files
+- **Manual backup protection**: Manual backups are never touched by automated cleanup
+- **File type validation**: Only deletes actual backup files
+- **Error handling and reporting**: Comprehensive error tracking
+- **Confirmation dialogs**: Required for manual cleanup operations
 
 ## User Interface
 
+### Enhanced File Management
+The backup files table now shows:
+- **Source column**: Distinguishes between manual backups and specific cron jobs
+- **Visual indicators**: Icons and colors to identify file sources
+- **Job attribution**: Clear indication of which job created each file
+
 ### Automatic Cleanup (Cron Jobs)
-When creating or editing a cron job, users can:
+When creating or editing a cron job:
 
 1. **Enable cleanup** by checking the "Enable automatic cleanup" checkbox
 2. **Choose cleanup method**:
    - Keep files for X days
    - Keep latest X files
    - Use both methods (AND logic)
-3. **Set retention values** with helpful validation and preview
+3. **Set retention values** with validation and preview
 4. **Choose timing** (before or after backup creation)
-5. **Preview cleanup effects** with real-time updates
+5. **Preview cleanup effects** with job-specific scope
 
 ### Manual Cleanup
-In the "Backup Files" section, users can:
-- Manually run cleanup with custom settings
-- Preview what will be deleted before confirming
+In the "Backup Files" section:
+- Manual cleanup affects ALL backup files (regardless of source)
+- Preview shows what will be deleted before confirming
 - Use different retention policies than scheduled jobs
-
-### Cron Jobs Table
-The scheduled jobs table now shows:
-- **Cleanup Policy** column with visual indicators
-- Cleanup method and retention values
-- When cleanup runs (before/after backup)
-
-## Technical Implementation
-
-### Core Components
-
-1. **`backupCleanup.js`**: Main cleanup logic
-   - `cleanupBackups()`: Execute cleanup with given policy
-   - `previewCleanup()`: Preview what would be cleaned up
-   - `formatCleanupResult()`: Format results for logging
-
-2. **Enhanced cron manager**: Integrates cleanup into backup process
-3. **Server endpoints**: Manual cleanup and preview APIs
-4. **UI enhancements**: Forms, validation, and preview functionality
-
-### File Detection Logic
-The system identifies backup files by:
-- Common backup extensions (.sql, .dump, .tar, .gz, .bak)
-- Timestamp patterns (YYYYMMDD_HHMMSS)
-- Database name patterns
-
-### Cleanup Process
-1. **Scan**: Find all backup files in directory
-2. **Filter**: Apply file pattern matching if specified
-3. **Sort**: Order by modification time (newest first)
-4. **Apply Policy**: Determine which files to keep based on method
-5. **Execute**: Delete files not in the keep list
-6. **Report**: Log results and any errors
 
 ## Usage Examples
 
-### Example 1: Daily Backup with 30-Day Retention
-```
-Cleanup Method: Keep files for X days
-Retention Days: 30
-Timing: After creating backup
-Result: Keeps all backups newer than 30 days
-```
+### Example 1: Multiple Jobs, Different Policies
 
-### Example 2: Hourly Backup with File Count Limit
+**Hourly Production Backup:**
 ```
-Cleanup Method: Keep latest X files
-Retention Count: 24
-Timing: After creating backup
-Result: Keeps only the 24 most recent backups (1 day of hourly backups)
+Job Name: prod-hourly
+Schedule: Every hour (0 * * * *)
+Cleanup: Keep latest 24 files (1 day of hourly backups)
+Files: verceldb_prod-hourly_20250924_120000.sql, etc.
 ```
 
-### Example 3: Conservative Policy (Both Methods)
+**Daily Archive Backup:**
 ```
-Cleanup Method: Use both methods (AND logic)
-Retention Days: 14
-Retention Count: 50
-Timing: After creating backup
-Result: Keeps files that are BOTH less than 14 days old AND among the 50 most recent
-```
-
-## Configuration in Cron Jobs
-
-When a cron job runs, the cleanup configuration is stored as part of the job config:
-
-```json
-{
-  "config": {
-    "cleanup": {
-      "enabled": true,
-      "method": "both",
-      "retentionDays": 30,
-      "retentionCount": 10,
-      "timing": "after"
-    }
-  }
-}
+Job Name: prod-daily-archive
+Schedule: Daily at 2 AM (0 2 * * *)
+Cleanup: Keep for 90 days
+Files: verceldb_prod-daily-archive_20250924_020000.sql, etc.
 ```
 
-## Error Handling
+**Result:** Each job manages only its own files independently.
 
-The system handles various error scenarios:
-- **Permission errors**: Reports files that couldn't be deleted
-- **Missing files**: Handles concurrent access gracefully
-- **Invalid configuration**: Uses safe defaults
-- **Cleanup failures**: Don't fail the backup process
+### Example 2: Safe Coexistence
+```
+Manual backup:           verceldb_20250924_100000.sql  ← Never deleted by cleanup
+Hourly job backup:       verceldb_hourly_20250924_100000.sql  ← Managed by hourly job
+Daily job backup:        verceldb_daily_20250924_100000.sql   ← Managed by daily job
+```
+
+## Technical Implementation
+
+### Enhanced Filename Generation
+```javascript
+// Manual backup (unchanged)
+const baseName = `${safeDb}_${stamp}${ext}`;
+
+// Cron job backup (NEW)
+const baseName = `${safeDb}_${safeJobName}_${stamp}${ext}`;
+```
+
+### Job-Specific Cleanup Pattern
+```javascript
+// Cleanup pattern for job isolation
+const jobFilePattern = `${safeDb}_${safeJobName}_`;
+await cleanupBackups(BACKUP_DIR, job.config.cleanup, jobFilePattern);
+```
+
+### File Source Detection
+The UI automatically detects file sources by analyzing filename patterns:
+- Manual: `{db}_{timestamp}.{ext}`
+- Cron job: `{db}_{job}_{timestamp}.{ext}`
+
+## Migration & Compatibility
+
+### **Backward Compatibility**
+- **Existing manual backups**: Continue to work exactly as before
+- **Existing cron job files**: Old files remain untouched and are detected as "legacy"
+- **New cron jobs**: Automatically use the improved naming convention
+
+### **Seamless Transition**
+- No data migration required
+- Existing workflows continue unchanged
+- New benefits apply immediately to new backups
 
 ## Benefits
 
-1. **Automated Disk Management**: Prevents unlimited backup accumulation
-2. **Flexible Policies**: Different retention needs for different backup schedules
-3. **User-Friendly**: Clear UI with previews and confirmations
-4. **Safe**: Multiple safeguards against accidental deletion
-5. **Integrated**: Seamlessly works with existing backup workflows
-6. **Monitoring**: Clear reporting of cleanup actions in job logs
+1. **Conflict Resolution**: No more cross-job file deletion
+2. **Flexible Policies**: Each job can have its own retention strategy
+3. **Manual Protection**: Manual backups are protected from automated cleanup
+4. **Clear Attribution**: Easy to see which job created each file
+5. **Backward Compatible**: Existing setups continue to work
+6. **Better Organization**: Files are logically grouped by purpose
+7. **Safer Operations**: Reduced risk of accidental data loss
 
-## Future Enhancements
+## Best Practices
 
-Potential improvements for future versions:
-- Size-based retention policies
-- Compression of old backups before deletion
-- Backup to cloud storage before deletion
-- Advanced scheduling (different policies for different times)
-- Cleanup statistics and reporting dashboard
+### Job Naming
+- Use descriptive names: `daily-full`, `hourly-incremental`, `weekly-archive`
+- Avoid special characters (automatically sanitized)
+- Keep names concise but meaningful
+
+### Cleanup Policies
+- **Frequent jobs** (hourly): Use count-based retention (e.g., 48 files = 2 days)
+- **Daily jobs**: Use time-based retention (e.g., 30-90 days)
+- **Archive jobs**: Use longer retention or disable cleanup
+
+### Monitoring
+- Check job logs for cleanup results
+- Monitor disk space usage
+- Review retention policies periodically
+
+This improved system provides enterprise-grade backup management with complete isolation between different backup strategies while maintaining simplicity for basic use cases.

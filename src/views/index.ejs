@@ -252,8 +252,15 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         /* Card Styles */
@@ -361,12 +368,12 @@
             transition: all 0.2s;
         }
 
-        .custom-checkbox input:checked + .checkbox-indicator {
+        .custom-checkbox input:checked+.checkbox-indicator {
             background: #3b82f6;
             border-color: #3b82f6;
         }
 
-        .custom-checkbox input:checked + .checkbox-indicator::after {
+        .custom-checkbox input:checked+.checkbox-indicator::after {
             content: '✓';
             color: white;
             font-size: 12px;
@@ -678,7 +685,7 @@
                                 <h2 class="card-title">Database Connection</h2>
                                 <p class="card-description">Configure your PostgreSQL database connection</p>
                             </div>
-                            
+
                             <div class="form-grid">
                                 <div class="form-group">
                                     <label>Host</label>
@@ -709,30 +716,37 @@
                                 <h2 class="card-title">Backup Options</h2>
                                 <p class="card-description">Customize your backup configuration</p>
                             </div>
-                            
+
                             <div class="form-grid">
                                 <div class="form-group">
                                     <label>Format</label>
                                     <select name="format">
-                                        <option value="plain" <%= defaults.format==='plain'?'selected':'' %>>Plain (.sql)</option>
-                                        <option value="custom" <%= defaults.format==='custom'?'selected':'' %>>Custom (.dump)</option>
-                                        <option value="tar" <%= defaults.format==='tar'?'selected':'' %>>Tar (.tar)</option>
+                                        <option value="plain" <%= defaults.format==='plain'?'selected':'' %>>Plain
+                                            (.sql)</option>
+                                        <option value="custom" <%= defaults.format==='custom'?'selected':'' %>>Custom
+                                            (.dump)</option>
+                                        <option value="tar" <%= defaults.format==='tar'?'selected':'' %>>Tar (.tar)
+                                        </option>
                                     </select>
                                 </div>
 
                                 <div class="form-group">
                                     <label>Output Style</label>
                                     <select name="outputStyle" id="outputStyle">
-                                        <option value="standard" <%= defaults.outputStyle==='standard'?'selected':'' %>>Standard pg_dump</option>
-                                        <option value="navicat" <%= defaults.outputStyle==='navicat'?'selected':'' %>>Navicat-like</option>
+                                        <option value="standard" <%= defaults.outputStyle==='standard'?'selected':'' %>>
+                                            Standard pg_dump</option>
+                                        <option value="navicat" <%= defaults.outputStyle==='navicat'?'selected':'' %>>
+                                            Navicat-like</option>
                                     </select>
                                 </div>
 
                                 <div class="form-group">
                                     <label>Data Format (for Navicat style)</label>
                                     <select name="insertFormat" id="insertFormat">
-                                        <option value="copy" <%= defaults.insertFormat==='copy'?'selected':'' %>>COPY statements</option>
-                                        <option value="inserts" <%= defaults.insertFormat==='inserts'?'selected':'' %>>INSERT statements</option>
+                                        <option value="copy" <%= defaults.insertFormat==='copy'?'selected':'' %>>COPY
+                                            statements</option>
+                                        <option value="inserts" <%= defaults.insertFormat==='inserts'?'selected':'' %>>
+                                            INSERT statements</option>
                                     </select>
                                 </div>
 
@@ -740,14 +754,17 @@
                                     <label>Include Owner</label>
                                     <select name="includeOwner">
                                         <option value="">Default</option>
-                                        <option value="true" <%= defaults.includeOwner===true?'selected':'' %>>Yes</option>
-                                        <option value="false" <%= defaults.includeOwner===false?'selected':'' %>>No</option>
+                                        <option value="true" <%= defaults.includeOwner===true?'selected':'' %>>Yes
+                                        </option>
+                                        <option value="false" <%= defaults.includeOwner===false?'selected':'' %>>No
+                                        </option>
                                     </select>
                                 </div>
 
                                 <div class="form-group">
                                     <label>Schema Only</label>
-                                    <input name="onlySchema" placeholder="public or schema_name" value="<%= defaults.onlySchema||'' %>" />
+                                    <input name="onlySchema" placeholder="public or schema_name"
+                                        value="<%= defaults.onlySchema||'' %>" />
                                 </div>
 
                                 <div class="form-group">
@@ -760,28 +777,31 @@
 
                                 <div class="form-group">
                                     <label>Exclude Schema</label>
-                                    <input name="excludeSchema" placeholder="information_schema" value="<%= defaults.excludeSchema||'' %>" />
+                                    <input name="excludeSchema" placeholder="information_schema"
+                                        value="<%= defaults.excludeSchema||'' %>" />
                                 </div>
 
                                 <div class="form-group">
                                     <label>Compression Level (0-9)</label>
-                                    <input name="compressLevel" type="number" min="0" max="9" value="<%= defaults.compressLevel ?? 0 %>" />
+                                    <input name="compressLevel" type="number" min="0" max="9"
+                                        value="<%= defaults.compressLevel ?? 0 %>" />
                                 </div>
 
                                 <div class="form-group">
                                     <label>Extra Arguments</label>
-                                    <input name="extraArgs" placeholder="--no-privileges --column-inserts" value="<%= defaults.extraArgs||'' %>" />
+                                    <input name="extraArgs" placeholder="--no-privileges --column-inserts"
+                                        value="<%= defaults.extraArgs||'' %>" />
                                 </div>
                             </div>
                         </div>
 
-                                                <!-- Schedule Configuration (Hidden by default) -->
+                        <!-- Schedule Configuration (Hidden by default) -->
                         <div class="card" id="cronJobCard" style="display: none;">
                             <div class="card-header">
                                 <h2 class="card-title">Schedule Configuration</h2>
                                 <p class="card-description">Set up automated backup scheduling</p>
                             </div>
-                            
+
                             <div class="form-grid">
                                 <div class="form-group">
                                     <label>Job Name</label>
@@ -796,7 +816,7 @@
                                     </select>
                                 </div>
                             </div>
-                            
+
                             <div id="customCronPattern" style="display: none;">
                                 <div class="form-group">
                                     <label>Custom Cron Pattern</label>
@@ -813,7 +833,7 @@
                                 <h2 class="card-title">Backup Cleanup</h2>
                                 <p class="card-description">Automatically manage old backup files</p>
                             </div>
-                            
+
                             <div class="checkbox-group" style="margin-bottom: 1.5rem;">
                                 <label class="custom-checkbox">
                                     <input type="checkbox" id="enableCleanup" name="enableCleanup" />
@@ -831,19 +851,22 @@
                                             <option value="count">Keep latest X files</option>
                                             <option value="both">Use both methods (AND logic)</option>
                                         </select>
-                                        <div class="helper-text" id="cleanupMethodHelp">Delete backups older than specified days</div>
+                                        <div class="helper-text" id="cleanupMethodHelp">Delete backups older than
+                                            specified days</div>
                                     </div>
                                 </div>
 
                                 <div class="form-grid" id="cleanupValues">
                                     <div class="form-group" id="retentionDaysGroup">
                                         <label>Retention Days</label>
-                                        <input name="retentionDays" type="number" min="1" max="365" value="30" placeholder="30" />
+                                        <input name="retentionDays" type="number" min="1" max="365" value="30"
+                                            placeholder="30" />
                                         <div class="helper-text">Delete backups older than this many days</div>
                                     </div>
                                     <div class="form-group" id="retentionCountGroup" style="display: none;">
                                         <label>Keep Latest Files</label>
-                                        <input name="retentionCount" type="number" min="1" max="1000" value="10" placeholder="10" />
+                                        <input name="retentionCount" type="number" min="1" max="1000" value="10"
+                                            placeholder="10" />
                                         <div class="helper-text">Number of most recent backups to keep</div>
                                     </div>
                                 </div>
@@ -860,6 +883,10 @@
                                 <div class="alert alert-info" style="margin-top: 1rem;">
                                     <strong>💡 Cleanup Preview:</strong>
                                     <div id="cleanupPreview">Enable cleanup to see preview</div>
+                                    <div style="margin-top: 0.5rem; font-size: 0.8rem; color: #64748b;">
+                                        <strong>Note:</strong> Cleanup will only affect files created by this specific
+                                        cron job, not manual backups or other jobs.
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -871,7 +898,7 @@
                                 <h2 class="card-title">Actions</h2>
                                 <p class="card-description">Choose how to execute the backup</p>
                             </div>
-                            
+
                             <div class="checkbox-group">
                                 <label class="custom-checkbox">
                                     <input type="checkbox" id="enableCronJob" />
@@ -879,7 +906,7 @@
                                 </label>
                                 <span>Schedule as cron job</span>
                             </div>
-                            
+
                             <div style="margin-top: 2rem;">
                                 <button type="submit" class="btn btn-primary" id="submitBtn">
                                     <span>🔄</span>
@@ -897,19 +924,41 @@
                             <h2 class="card-title">Backup Files</h2>
                             <p class="card-description">Manage your backup files</p>
                         </div>
-                        
+
                         <% if (files && files.length > 0) { %>
                         <table class="data-table">
                             <thead>
                                 <tr>
                                     <th>File Name</th>
+                                    <th>Source</th>
                                     <th>Size</th>
                                     <th>Modified</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <% files.forEach(f => { %>
+                                <% files.forEach(f => { 
+                                    // Detect file source based on naming pattern
+                                    const nameParts = f.name.split('_');
+                                    let fileSource = 'Manual';
+                                    let sourceIcon = '👤';
+                                    let sourceColor = '#64748b';
+                                    
+                                    // Check if it matches cron job pattern: db_jobname_timestamp.ext
+                                    if (nameParts.length >= 3) {
+                                        // Look for matching cron job
+                                        const potentialJobName = nameParts.slice(1, -1).join('_');
+                                        const matchingJob = cronJobs.find(job => 
+                                            f.name.includes(`_${job.name.replace(/[^a-zA-Z0-9]/g, '_')}_`)
+                                        );
+                                        
+                                        if (matchingJob) {
+                                            fileSource = matchingJob.name;
+                                            sourceIcon = '⏰';
+                                            sourceColor = '#3b82f6';
+                                        }
+                                    }
+                                %>
                                 <tr>
                                     <td>
                                         <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -917,17 +966,25 @@
                                             <%= f.name %>
                                         </div>
                                     </td>
+                                    <td>
+                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <span style="color: <%- sourceColor %>"><%- sourceIcon %></span>
+                                            <span style="color: <%= sourceColor %>; font-size: 0.9rem;">
+                                                <%= fileSource %>
+                                            </span>
+                                        </div>
+                                    </td>
                                     <td><%= (f.size/1024/1024).toFixed(2) %> MB</td>
                                     <td><%= f.mtime.toLocaleString() %></td>
                                     <td>
                                         <div style="display: flex; gap: 0.5rem;">
-                                            <a href="/download/<%= encodeURIComponent(f.name) %>" class="btn btn-secondary btn-small">
+                                            <a href="/download/<%= encodeURIComponent(f.name) %>"
+                                                class="btn btn-secondary btn-small">
                                                 <span>⬇️</span>
                                                 Download
                                             </a>
-                                            <form method="POST" action="/delete/<%= encodeURIComponent(f.name) %>" 
-                                                  style="display:inline" 
-                                                  onsubmit="return confirm('Delete this file?')">
+                                            <form method="POST" action="/delete/<%= encodeURIComponent(f.name) %>"
+                                                style="display:inline" onsubmit="return confirm('Delete this file?')">
                                                 <button type="submit" class="btn btn-danger btn-small">
                                                     <span>🗑️</span>
                                                     Delete
@@ -946,16 +1003,18 @@
                             <p>Create your first backup to see files here.</p>
                         </div>
                         <% } %>
-                        
+
                         <% if (files && files.length > 0) { %>
                         <!-- Manual Cleanup Form -->
-                        <div style="border-top: 1px solid rgba(148, 163, 184, 0.1); margin-top: 2rem; padding-top: 2rem;">
+                        <div
+                            style="border-top: 1px solid rgba(148, 163, 184, 0.1); margin-top: 2rem; padding-top: 2rem;">
                             <div class="card-header">
                                 <h3 class="card-title">Manual Cleanup</h3>
                                 <p class="card-description">Clean up old backup files manually</p>
                             </div>
-                            
-                            <form method="POST" action="/cleanup" style="background: transparent; border: none; padding: 0;">
+
+                            <form method="POST" action="/cleanup"
+                                style="background: transparent; border: none; padding: 0;">
                                 <div class="form-grid">
                                     <div class="form-group">
                                         <label>Cleanup Method</label>
@@ -970,15 +1029,18 @@
                                 <div class="form-grid">
                                     <div class="form-group">
                                         <label>Retention Days</label>
-                                        <input name="retentionDays" type="number" min="1" max="365" value="30" placeholder="30" />
+                                        <input name="retentionDays" type="number" min="1" max="365" value="30"
+                                            placeholder="30" />
                                     </div>
                                     <div class="form-group">
                                         <label>Keep Latest Files</label>
-                                        <input name="retentionCount" type="number" min="1" max="100" value="10" placeholder="10" />
+                                        <input name="retentionCount" type="number" min="1" max="100" value="10"
+                                            placeholder="10" />
                                     </div>
                                 </div>
 
-                                <button type="submit" class="btn btn-danger" onclick="return confirm('This will permanently delete old backup files. Continue?')">
+                                <button type="submit" class="btn btn-danger"
+                                    onclick="return confirm('This will permanently delete old backup files. Continue?')">
                                     <span>🧹</span>
                                     Clean Up Now
                                 </button>
@@ -995,7 +1057,7 @@
                             <h2 class="card-title">Scheduled Backup Jobs</h2>
                             <p class="card-description">Manage your automated backup jobs</p>
                         </div>
-                        
+
                         <% if (cronJobs && cronJobs.length > 0) { %>
                         <table class="data-table">
                             <thead>
@@ -1019,7 +1081,8 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <code style="background: rgba(59, 130, 246, 0.1); padding: 0.25rem 0.5rem; border-radius: 4px; color: #93c5fd;">
+                                        <code
+                                            style="background: rgba(59, 130, 246, 0.1); padding: 0.25rem 0.5rem; border-radius: 4px; color: #93c5fd;">
                                             <%= job.cronPattern %>
                                         </code>
                                         <br>
@@ -1044,24 +1107,25 @@
                                     </td>
                                     <td>
                                         <% if (job.config.cleanup && job.config.cleanup.enabled) { %>
-                                            <div style="color: #10b981;">
-                                                <span>🧹</span>
-                                                <% if (job.config.cleanup.method === 'days') { %>
-                                                    Keep <%= job.config.cleanup.retentionDays %> days
-                                                <% } else if (job.config.cleanup.method === 'count') { %>
-                                                    Keep <%= job.config.cleanup.retentionCount %> files
-                                                <% } else if (job.config.cleanup.method === 'both') { %>
-                                                    Keep <%= job.config.cleanup.retentionDays %>d & <%= job.config.cleanup.retentionCount %> files
-                                                <% } %>
-                                            </div>
-                                            <small style="color: #64748b;">
-                                                <%= job.config.cleanup.timing === 'after' ? 'After backup' : 'Before backup' %>
-                                            </small>
+                                        <div style="color: #10b981;">
+                                            <span>🧹</span>
+                                            <% if (job.config.cleanup.method === 'days') { %>
+                                            Keep <%= job.config.cleanup.retentionDays %> days
+                                            <% } else if (job.config.cleanup.method === 'count') { %>
+                                            Keep <%= job.config.cleanup.retentionCount %> files
+                                            <% } else if (job.config.cleanup.method === 'both') { %>
+                                            Keep <%= job.config.cleanup.retentionDays %>d &
+                                            <%= job.config.cleanup.retentionCount %> files
+                                            <% } %>
+                                        </div>
+                                        <small style="color: #64748b;">
+                                            <%= job.config.cleanup.timing === 'after' ? 'After backup' : 'Before backup' %>
+                                        </small>
                                         <% } else { %>
-                                            <span style="color: #64748b;">
-                                                <span>📦</span>
-                                                Keep all
-                                            </span>
+                                        <span style="color: #64748b;">
+                                            <span>📦</span>
+                                            Keep all
+                                        </span>
                                         <% } %>
                                     </td>
                                     <td>
@@ -1071,25 +1135,26 @@
                                     </td>
                                     <td>
                                         <% if (job.lastRun) { %>
-                                            <div><%= new Date(job.lastRun).toLocaleString() %></div>
-                                            <small class="status-<%= job.lastStatus %>">
-                                                <%= job.lastStatus === 'success' ? '✓' : '✗' %> <%= job.lastStatus %>
-                                            </small>
+                                        <div><%= new Date(job.lastRun).toLocaleString() %></div>
+                                        <small class="status-<%= job.lastStatus %>">
+                                            <%= job.lastStatus === 'success' ? '✓' : '✗' %> <%= job.lastStatus %>
+                                        </small>
                                         <% } else { %>
-                                            <em style="color: #64748b;">Never</em>
+                                        <em style="color: #64748b;">Never</em>
                                         <% } %>
                                     </td>
                                     <td>
                                         <div style="display: flex; gap: 0.5rem;">
-                                            <form method="POST" action="/cron-jobs/<%= job.id %>/toggle" style="display:inline">
+                                            <form method="POST" action="/cron-jobs/<%= job.id %>/toggle"
+                                                style="display:inline">
                                                 <button type="submit" class="btn btn-secondary btn-small">
                                                     <%= job.enabled ? '⏸️' : '▶️' %>
                                                     <%= job.enabled ? 'Disable' : 'Enable' %>
                                                 </button>
                                             </form>
-                                            <form method="POST" action="/cron-jobs/<%= job.id %>/delete" 
-                                                  style="display:inline" 
-                                                  onsubmit="return confirm('Delete this cron job?')">
+                                            <form method="POST" action="/cron-jobs/<%= job.id %>/delete"
+                                                style="display:inline"
+                                                onsubmit="return confirm('Delete this cron job?')">
                                                 <button type="submit" class="btn btn-danger btn-small">
                                                     <span>🗑️</span>
                                                     Delete
@@ -1116,7 +1181,7 @@
 
     <script>
         // Navigation and UI Management
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.getElementById('mainContent');
             const mobileMenuBtn = document.getElementById('mobileMenuBtn');
@@ -1143,42 +1208,42 @@
 
             // Mobile menu toggle
             if (mobileMenuBtn) {
-                mobileMenuBtn.addEventListener('click', function() {
+                mobileMenuBtn.addEventListener('click', function () {
                     sidebar.classList.toggle('open');
                 });
             }
 
             // Navigation handling
             navItems.forEach(item => {
-                item.addEventListener('click', function() {
+                item.addEventListener('click', function () {
                     const targetSection = this.dataset.section;
-                    
+
                     // Update active nav item
                     navItems.forEach(nav => nav.classList.remove('active'));
                     this.classList.add('active');
-                    
+
                     // Update content sections
                     contentSections.forEach(section => section.classList.remove('active'));
                     const targetElement = document.getElementById(targetSection);
                     if (targetElement) {
                         targetElement.classList.add('active');
                     }
-                    
+
                     // Update page title
                     if (sections[targetSection]) {
                         pageTitle.textContent = sections[targetSection].title;
                         pageSubtitle.textContent = sections[targetSection].subtitle;
                     }
-                    
+
                     // Close mobile menu
                     sidebar.classList.remove('open');
                 });
             });
 
             // Close mobile menu when clicking outside
-            document.addEventListener('click', function(e) {
-                if (window.innerWidth <= 768 && 
-                    !sidebar.contains(e.target) && 
+            document.addEventListener('click', function (e) {
+                if (window.innerWidth <= 768 &&
+                    !sidebar.contains(e.target) &&
                     !mobileMenuBtn.contains(e.target)) {
                     sidebar.classList.remove('open');
                 }
@@ -1199,19 +1264,19 @@
             if (outputStyle) {
                 outputStyle.addEventListener('change', toggleFormatOptions);
             }
-            
+
             if (enableCronJob) {
                 enableCronJob.addEventListener('change', toggleCronJobSection);
             }
-            
+
             if (cronPreset) {
                 cronPreset.addEventListener('change', toggleCustomCronPattern);
             }
-            
+
             // Debounced validation for custom cron pattern
             if (cronPatternInput) {
                 let cronValidationTimeout;
-                cronPatternInput.addEventListener('input', function() {
+                cronPatternInput.addEventListener('input', function () {
                     clearTimeout(cronValidationTimeout);
                     cronValidationTimeout = setTimeout(validateCronPattern, 500);
                 });
@@ -1222,15 +1287,15 @@
             const cleanupMethod = document.getElementById('cleanupMethod');
             const retentionDays = document.querySelector('input[name="retentionDays"]');
             const retentionCount = document.querySelector('input[name="retentionCount"]');
-            
+
             if (enableCleanup) {
                 enableCleanup.addEventListener('change', toggleCleanupOptions);
             }
-            
+
             if (cleanupMethod) {
                 cleanupMethod.addEventListener('change', toggleCleanupMethod);
             }
-            
+
             // Update preview when values change
             [retentionDays, retentionCount, cleanupMethod].forEach(element => {
                 if (element) {
@@ -1242,11 +1307,11 @@
             // Form submission handling
             const backupForm = document.getElementById('backupForm');
             if (backupForm) {
-                backupForm.addEventListener('submit', function() {
+                backupForm.addEventListener('submit', function () {
                     const submitBtn = document.getElementById('submitBtn');
                     submitBtn.disabled = true;
                     submitBtn.innerHTML = '<span>⏳</span> Processing...';
-                    
+
                     // Re-enable after timeout
                     setTimeout(() => {
                         submitBtn.disabled = false;
@@ -1254,7 +1319,7 @@
                     }, 10000);
                 });
             }
-            
+
             // Initialize states
             toggleFormatOptions();
             toggleCronJobSection();
@@ -1268,9 +1333,9 @@
         function toggleCleanupOptions() {
             const checkbox = document.getElementById('enableCleanup');
             const optionsDiv = document.getElementById('cleanupOptions');
-            
+
             if (!checkbox || !optionsDiv) return;
-            
+
             if (checkbox.checked) {
                 optionsDiv.style.display = 'block';
                 updateCleanupPreview();
@@ -1285,12 +1350,12 @@
             const helpDiv = document.getElementById('cleanupMethodHelp');
             const daysGroup = document.getElementById('retentionDaysGroup');
             const countGroup = document.getElementById('retentionCountGroup');
-            
+
             if (!methodSelect || !daysGroup || !countGroup || !helpDiv) return;
-            
+
             const method = methodSelect.value;
-            
-            switch(method) {
+
+            switch (method) {
                 case 'days':
                     daysGroup.style.display = 'block';
                     countGroup.style.display = 'none';
@@ -1317,20 +1382,20 @@
             const daysInput = document.querySelector('input[name="retentionDays"]');
             const countInput = document.querySelector('input[name="retentionCount"]');
             const previewDiv = document.getElementById('cleanupPreview');
-            
+
             if (!enableCleanup || !previewDiv) return;
-            
+
             if (!enableCleanup.checked) {
                 previewDiv.innerHTML = 'Cleanup disabled - all backup files will be kept';
                 return;
             }
-            
+
             const method = methodSelect?.value || 'days';
             const days = parseInt(daysInput?.value) || 30;
             const count = parseInt(countInput?.value) || 10;
-            
+
             let preview = '';
-            switch(method) {
+            switch (method) {
                 case 'days':
                     preview = `Delete backups older than <strong>${days} day${days !== 1 ? 's' : ''}</strong>`;
                     break;
@@ -1338,10 +1403,11 @@
                     preview = `Keep only the latest <strong>${count} backup${count !== 1 ? 's' : ''}</strong>`;
                     break;
                 case 'both':
-                    preview = `Keep files that are both: less than <strong>${days} day${days !== 1 ? 's' : ''}</strong> old AND among the latest <strong>${count} backup${count !== 1 ? 's' : ''}</strong>`;
+                    preview =
+                        `Keep files that are both: less than <strong>${days} day${days !== 1 ? 's' : ''}</strong> old AND among the latest <strong>${count} backup${count !== 1 ? 's' : ''}</strong>`;
                     break;
             }
-            
+
             previewDiv.innerHTML = preview;
         }
 
@@ -1351,9 +1417,9 @@
             const insertFormatGroup = document.querySelector('.form-group:has(#insertFormat)');
             const formatSelect = document.querySelector('select[name="format"]');
             const compressGroup = document.querySelector('.form-group:has(input[name="compressLevel"])');
-            
+
             if (!outputStyle) return;
-            
+
             if (outputStyle.value === 'navicat') {
                 if (insertFormatGroup) insertFormatGroup.style.display = 'block';
                 if (formatSelect) {
@@ -1376,9 +1442,9 @@
             const submitBtn = document.getElementById('submitBtn');
             const form = document.getElementById('backupForm');
             const jobNameInput = document.querySelector('input[name="jobName"]');
-            
+
             if (!checkbox || !cronCard || !submitBtn || !form) return;
-            
+
             if (checkbox.checked) {
                 cronCard.style.display = 'block';
                 if (cleanupCard) cleanupCard.style.display = 'block';
@@ -1403,9 +1469,9 @@
             const preset = document.getElementById('cronPreset');
             const customSection = document.getElementById('customCronPattern');
             const patternInput = document.querySelector('input[name="cronPattern"]');
-            
+
             if (!preset || !customSection) return;
-            
+
             if (preset.value === 'custom') {
                 customSection.style.display = 'block';
                 if (patternInput) patternInput.required = true;
@@ -1419,28 +1485,30 @@
         async function validateCronPattern() {
             const patternInput = document.querySelector('input[name="cronPattern"]');
             const descriptionDiv = document.getElementById('cronDescription');
-            
+
             if (!patternInput || !descriptionDiv) return;
-            
+
             const pattern = patternInput.value.trim();
-            
+
             if (!pattern) {
                 descriptionDiv.textContent = '';
                 patternInput.style.borderColor = '';
                 return;
             }
-            
+
             try {
                 const response = await fetch('/api/validate-cron', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ pattern })
+                    body: JSON.stringify({
+                        pattern
+                    })
                 });
-                
+
                 const result = await response.json();
-                
+
                 if (result.valid) {
                     descriptionDiv.innerHTML = `<span style="color: #34d399;">✓ ${result.description}</span>`;
                     patternInput.style.borderColor = '#34d399';
@@ -1458,7 +1526,7 @@
         function handleResize() {
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.getElementById('mainContent');
-            
+
             if (window.innerWidth > 768) {
                 sidebar.classList.remove('open');
             }
@@ -1466,6 +1534,6 @@
 
         window.addEventListener('resize', handleResize);
     </script>
-</body>
+    </body>
 
 </html>

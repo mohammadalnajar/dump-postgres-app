@@ -287,10 +287,12 @@ async function executeBackupJob(job) {
         let cleanupResultBefore = null;
         if (job.config.cleanup?.enabled && job.config.cleanup?.timing === 'before') {
             try {
+                // Use job-specific pattern for cleanup isolation: {db}_{job-name}_
+                const jobFilePattern = `${safeDb}_${safeJobName}_`;
                 cleanupResultBefore = await cleanupBackups(
                     BACKUP_DIR,
                     job.config.cleanup,
-                    job.config.db
+                    jobFilePattern
                 );
                 console.log(
                     `Pre-backup cleanup for ${job.name}: ${formatCleanupResult(
@@ -307,11 +309,15 @@ async function executeBackupJob(job) {
         const { mkdir } = await import('node:fs/promises');
         await mkdir(BACKUP_DIR, { recursive: true });
 
-        // Compute filename
+        // Compute filename with job identifier for isolation
         const safeDb = sanitizeName(job.config.db);
+        const safeJobName = sanitizeName(job.name);
         const stamp = timestamp();
         const ext = extensionFor(job.config.format, job.config.outputStyle);
-        const baseName = `${safeDb}_${stamp}${ext || ''}`;
+
+        // Include job name in filename for better organization and cleanup isolation
+        // Format: {db}_{job-name}_{timestamp}.{ext}
+        const baseName = `${safeDb}_${safeJobName}_${stamp}${ext || ''}`;
         const outPath = path.join(BACKUP_DIR, baseName);
 
         // Build args
@@ -354,10 +360,12 @@ async function executeBackupJob(job) {
         let cleanupResultAfter = null;
         if (job.config.cleanup?.enabled && job.config.cleanup?.timing === 'after') {
             try {
+                // Use job-specific pattern for cleanup isolation: {db}_{job-name}_
+                const jobFilePattern = `${safeDb}_${safeJobName}_`;
                 cleanupResultAfter = await cleanupBackups(
                     BACKUP_DIR,
                     job.config.cleanup,
-                    job.config.db
+                    jobFilePattern
                 );
                 console.log(
                     `Post-backup cleanup for ${job.name}: ${formatCleanupResult(
