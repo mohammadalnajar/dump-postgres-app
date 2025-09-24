@@ -612,6 +612,15 @@
             margin-bottom: 1rem;
             opacity: 0.5;
         }
+
+        /* File source colors */
+        .source-manual {
+            color: #64748b;
+        }
+
+        .source-cron {
+            color: #3b82f6;
+        }
     </style>
 </head>
 
@@ -942,7 +951,7 @@
                                     const nameParts = f.name.split('_');
                                     let fileSource = 'Manual';
                                     let sourceIcon = '👤';
-                                    let sourceColor = '#64748b';
+                                    let sourceCssClass = 'source-manual';
                                     
                                     // Check if it matches cron job pattern: db_jobname_timestamp.ext
                                     if (nameParts.length >= 3) {
@@ -955,7 +964,7 @@
                                         if (matchingJob) {
                                             fileSource = matchingJob.name;
                                             sourceIcon = '⏰';
-                                            sourceColor = '#3b82f6';
+                                            sourceCssClass = 'source-cron';
                                         }
                                     }
                                 %>
@@ -968,8 +977,8 @@
                                     </td>
                                     <td>
                                         <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                            <span style="color: <%- sourceColor %>"><%- sourceIcon %></span>
-                                            <span style="color: <%= sourceColor %>; font-size: 0.9rem;">
+                                            <span class="<%= sourceCssClass %>"><%- sourceIcon %></span>
+                                            <span class="<%= sourceCssClass %>" style="font-size: 0.9rem;">
                                                 <%= fileSource %>
                                             </span>
                                         </div>
