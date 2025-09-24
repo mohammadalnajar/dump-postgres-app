@@ -24,6 +24,9 @@ const ALGORITHM = 'aes-256-gcm';
 // In-memory store for active cron tasks
 const activeTasks = new Map();
 
+// Track running backup jobs to prevent concurrent executions
+const runningJobs = new Set();
+
 /**
  * Encrypt sensitive data
  */
@@ -77,7 +80,40 @@ function decrypt(encryptedData) {
 }
 
 /**
- * Load jobs from file with credential decryption
+ * Load jobs from file with credential decryption (async version)
+ */
+async function loadJobsAsync() {
+    try {
+        // Use async file system operations
+        const { access, readFile } = await import('node:fs/promises');
+
+        try {
+            await access(JOBS_FILE);
+            const data = await readFile(JOBS_FILE, 'utf8');
+            const jobs = JSON.parse(data);
+
+            // Decrypt passwords for each job
+            return jobs.map((job) => ({
+                ...job,
+                config: {
+                    ...job.config,
+                    password: job.config.encryptedPassword
+                        ? decrypt(job.config.encryptedPassword)
+                        : job.config.password
+                }
+            }));
+        } catch (accessError) {
+            // File doesn't exist, return empty array
+            return [];
+        }
+    } catch (error) {
+        console.error('Error loading jobs:', error);
+        return [];
+    }
+}
+
+/**
+ * Load jobs from file with credential decryption (synchronous fallback)
  */
 function loadJobs() {
     try {
@@ -103,7 +139,30 @@ function loadJobs() {
 }
 
 /**
- * Save jobs to file with credential encryption
+ * Save jobs to file with credential encryption (async version)
+ */
+async function saveJobsAsync(jobs) {
+    try {
+        // Encrypt passwords before saving
+        const encryptedJobs = jobs.map((job) => ({
+            ...job,
+            config: {
+                ...job.config,
+                encryptedPassword: encrypt(job.config.password),
+                password: undefined // Remove plain text password
+            }
+        }));
+
+        const { writeFile } = await import('node:fs/promises');
+        await writeFile(JOBS_FILE, JSON.stringify(encryptedJobs, null, 2));
+    } catch (error) {
+        console.error('Error saving jobs:', error);
+        throw error;
+    }
+}
+
+/**
+ * Save jobs to file with credential encryption (synchronous fallback)
  */
 function saveJobs(jobs) {
     try {
@@ -209,14 +268,23 @@ function describeCronPattern(pattern) {
 }
 
 /**
- * Execute backup job
+ * Execute backup job (improved with non-blocking operations and concurrency control)
  */
 async function executeBackupJob(job) {
+    // Prevent concurrent execution of the same job
+    if (runningJobs.has(job.id)) {
+        console.log(`Job ${job.name} is already running, skipping execution`);
+        return;
+    }
+
+    runningJobs.add(job.id);
+
     try {
         console.log(`Executing scheduled backup job: ${job.name}`);
 
-        // Ensure backup directory exists
-        ensureDir(BACKUP_DIR);
+        // Ensure backup directory exists (async)
+        const { mkdir } = await import('node:fs/promises');
+        await mkdir(BACKUP_DIR, { recursive: true });
 
         // Compute filename
         const safeDb = sanitizeName(job.config.db);
@@ -243,9 +311,9 @@ async function executeBackupJob(job) {
             insertFormat: job.config.insertFormat
         });
 
-        // If directory format, outPath must be a directory
+        // If directory format, outPath must be a directory (async)
         if (job.config.format === 'directory') {
-            fs.mkdirSync(outPath, { recursive: true });
+            await mkdir(outPath, { recursive: true });
         }
 
         await runPgDump({
@@ -261,49 +329,78 @@ async function executeBackupJob(job) {
             }
         });
 
-        // Update job status
-        const jobs = loadJobs();
-        const jobIndex = jobs.findIndex((j) => j.id === job.id);
-        if (jobIndex !== -1) {
-            jobs[jobIndex].lastRun = new Date().toISOString();
-            jobs[jobIndex].lastStatus = 'success';
-            jobs[jobIndex].lastResult = `Backup created: ${baseName}`;
-            saveJobs(jobs);
+        // Update job status (async)
+        try {
+            const jobs = await loadJobsAsync();
+            const jobIndex = jobs.findIndex((j) => j.id === job.id);
+            if (jobIndex !== -1) {
+                jobs[jobIndex].lastRun = new Date().toISOString();
+                jobs[jobIndex].lastStatus = 'success';
+                jobs[jobIndex].lastResult = `Backup created: ${baseName}`;
+                await saveJobsAsync(jobs);
+            }
+        } catch (saveError) {
+            console.warn('Failed to update job status after successful backup:', saveError);
+            // Don't fail the entire backup for status update issues
         }
 
         console.log(`Scheduled backup completed successfully: ${baseName}`);
     } catch (error) {
         console.error(`Scheduled backup failed for job ${job.name}:`, error);
 
-        // Update job status
-        const jobs = loadJobs();
-        const jobIndex = jobs.findIndex((j) => j.id === job.id);
-        if (jobIndex !== -1) {
-            jobs[jobIndex].lastRun = new Date().toISOString();
-            jobs[jobIndex].lastStatus = 'error';
-            jobs[jobIndex].lastResult = error.message || String(error);
-            saveJobs(jobs);
+        // Update job status (async)
+        try {
+            const jobs = await loadJobsAsync();
+            const jobIndex = jobs.findIndex((j) => j.id === job.id);
+            if (jobIndex !== -1) {
+                jobs[jobIndex].lastRun = new Date().toISOString();
+                jobs[jobIndex].lastStatus = 'error';
+                jobs[jobIndex].lastResult = error.message || String(error);
+                await saveJobsAsync(jobs);
+            }
+        } catch (saveError) {
+            console.warn('Failed to update job status after backup failure:', saveError);
         }
+    } finally {
+        // Always remove from running jobs set
+        runningJobs.delete(job.id);
     }
 }
 
 /**
- * Start a cron job
+ * Start a cron job (improved to prevent blocking)
  */
 function startCronJob(job) {
     if (activeTasks.has(job.id)) {
         stopCronJob(job.id);
     }
 
-    const task = cron.schedule(job.cronPattern, () => executeBackupJob(job), {
-        scheduled: false,
-        name: job.id
-    });
+    const task = cron.schedule(
+        job.cronPattern,
+        async () => {
+            // Execute backup job asynchronously to prevent blocking
+            // Use setImmediate to ensure the cron callback returns quickly
+            setImmediate(async () => {
+                try {
+                    await executeBackupJob(job);
+                } catch (error) {
+                    console.error(`Unhandled error in cron job ${job.name}:`, error);
+                }
+            });
+        },
+        {
+            scheduled: false,
+            name: job.id,
+            timezone: process.env.TZ || 'UTC' // Add timezone support
+        }
+    );
 
     activeTasks.set(job.id, task);
     task.start();
 
-    console.log(`Started cron job: ${job.name} (${job.cronPattern})`);
+    console.log(
+        `Started cron job: ${job.name} (${job.cronPattern}) in timezone ${process.env.TZ || 'UTC'}`
+    );
 }
 
 /**
@@ -427,6 +524,12 @@ function initializeCronManager() {
             console.error(`Failed to start cron job ${job.name}:`, error);
         }
     }
+
+    // Log initial health status
+    setTimeout(() => logCronHealth(), 1000);
+
+    // Set up periodic health logging (every hour)
+    setInterval(logCronHealth, 60 * 60 * 1000);
 }
 
 /**
@@ -455,11 +558,64 @@ function getPredefinedPatterns() {
     ];
 }
 
+/**
+ * Get cron job status and health information
+ */
+function getCronJobStatus() {
+    const jobs = loadJobs();
+    const activeJobsCount = activeTasks.size;
+    const runningJobsCount = runningJobs.size;
+    const enabledJobs = jobs.filter((job) => job.enabled);
+
+    return {
+        totalJobs: jobs.length,
+        enabledJobs: enabledJobs.length,
+        activeJobs: activeJobsCount,
+        runningJobs: runningJobsCount,
+        jobs: jobs.map((job) => ({
+            id: job.id,
+            name: job.name,
+            enabled: job.enabled,
+            cronPattern: job.cronPattern,
+            description: describeCronPattern(job.cronPattern),
+            lastRun: job.lastRun,
+            lastStatus: job.lastStatus,
+            isActive: activeTasks.has(job.id),
+            isRunning: runningJobs.has(job.id),
+            nextRun: activeTasks.has(job.id) ? 'Scheduled' : 'Not scheduled'
+        }))
+    };
+}
+
+/**
+ * Log cron job health information
+ */
+function logCronHealth() {
+    const status = getCronJobStatus();
+    console.log('\n=== Cron Job Health Status ===');
+    console.log(`Total jobs: ${status.totalJobs}`);
+    console.log(`Enabled jobs: ${status.enabledJobs}`);
+    console.log(`Active scheduled jobs: ${status.activeJobs}`);
+    console.log(`Currently running jobs: ${status.runningJobs}`);
+
+    if (status.runningJobs > 0) {
+        console.log('⚠️  Some jobs are currently running - this is normal during backup execution');
+    }
+
+    if (status.enabledJobs !== status.activeJobs) {
+        console.log('⚠️  Mismatch between enabled and active jobs - some may have failed to start');
+    }
+
+    console.log('===============================\n');
+}
+
 export {
     encrypt,
     decrypt,
     loadJobs,
+    loadJobsAsync,
     saveJobs,
+    saveJobsAsync,
     isValidCronPattern,
     describeCronPattern,
     createCronJob,
@@ -470,5 +626,7 @@ export {
     initializeCronManager,
     getPredefinedPatterns,
     createCronJobWithCredentialRef,
-    getPasswordFromCredentialRef
+    getPasswordFromCredentialRef,
+    getCronJobStatus,
+    logCronHealth
 };
