@@ -23,12 +23,14 @@ import {
     initializeCronManager,
     getAllCronJobs,
     getCronJob,
+    getCronJobForEdit,
     createCronJob,
     updateCronJob,
     deleteCronJob,
     isValidCronPattern,
     describeCronPattern,
-    getPredefinedPatterns
+    getPredefinedPatterns,
+    loadJobsWithoutDecryption
 } from './lib/cronManagerSecure.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -349,6 +351,114 @@ app.post(
         } catch (error) {
             console.error('Delete cron job error:', error);
             res.redirect('/?error=' + encodeURIComponent(error.message || String(error)));
+        }
+    }
+);
+
+// Get cron job for editing (displays edit form)
+app.get(
+    '/cron-jobs/:id/edit',
+    USE_SESSION_AUTH ? requireAuth : (req, res, next) => next(),
+    (req, res) => {
+        try {
+            const jobId = req.params.id;
+            const job = getCronJobForEdit(jobId);
+
+            if (!job) {
+                return res.redirect('/?error=' + encodeURIComponent('Cron job not found'));
+            }
+
+            res.render('edit-cron-job', {
+                title: TITLE,
+                job,
+                predefinedPatterns: getPredefinedPatterns(),
+                message: req.query.message,
+                error: req.query.error
+            });
+        } catch (error) {
+            console.error('Get cron job for edit error:', error);
+            res.redirect('/?error=' + encodeURIComponent(error.message || String(error)));
+        }
+    }
+);
+
+// Update cron job
+app.post(
+    '/cron-jobs/:id/edit',
+    USE_SESSION_AUTH ? requireAuth : (req, res, next) => next(),
+    (req, res) => {
+        try {
+            const jobId = req.params.id;
+            const job = getCronJob(jobId);
+
+            if (!job) {
+                return res.redirect('/?error=' + encodeURIComponent('Cron job not found'));
+            }
+
+            let cronPattern = req.body.cronPattern;
+
+            // Handle predefined patterns
+            if (req.body.cronPreset && req.body.cronPreset !== 'custom') {
+                cronPattern = req.body.cronPreset;
+            }
+
+            if (!cronPattern) {
+                throw new Error('Cron pattern is required');
+            }
+
+            if (!isValidCronPattern(cronPattern)) {
+                throw new Error('Invalid cron pattern');
+            }
+
+            // Build updated cleanup configuration
+            const cleanupConfig = {};
+            if (req.body.enableCleanup === 'on' || req.body.enableCleanup === 'true') {
+                cleanupConfig.enabled = true;
+                cleanupConfig.method = req.body.cleanupMethod || 'days';
+                cleanupConfig.timing = req.body.cleanupTiming || 'after';
+
+                if (cleanupConfig.method === 'days' || cleanupConfig.method === 'both') {
+                    const retentionDays = parseInt(req.body.retentionDays);
+                    if (isNaN(retentionDays) || retentionDays < 1 || retentionDays > 365) {
+                        throw new Error('Retention days must be between 1 and 365');
+                    }
+                    cleanupConfig.retentionDays = retentionDays;
+                }
+
+                if (cleanupConfig.method === 'count' || cleanupConfig.method === 'both') {
+                    const retentionCount = parseInt(req.body.retentionCount);
+                    if (isNaN(retentionCount) || retentionCount < 1 || retentionCount > 1000) {
+                        throw new Error('Retention count must be between 1 and 1000');
+                    }
+                    cleanupConfig.retentionCount = retentionCount;
+                }
+            } else {
+                cleanupConfig.enabled = false;
+            }
+
+            // Update only the cron pattern and cleanup configuration
+            const updates = {
+                cronPattern,
+                config: {
+                    ...job.config,
+                    cleanup: cleanupConfig
+                }
+            };
+
+            updateCronJob(jobId, updates);
+
+            res.redirect(
+                '/?message=' +
+                    encodeURIComponent(`Cron job "${job.name}" updated successfully`) +
+                    '&tab=scheduled-jobs'
+            );
+        } catch (error) {
+            console.error('Update cron job error:', error);
+            const jobId = req.params.id;
+            res.redirect(
+                `/cron-jobs/${jobId}/edit?error=` +
+                    encodeURIComponent(error.message || String(error))
+            );
         }
     }
 );

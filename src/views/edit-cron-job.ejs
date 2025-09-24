@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title><%= title %> - Edit Cron Job</title>
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+            background: #0f172a;
+            margin: 0;
+            color: #f1f5f9;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            color: #f1f5f9;
+            margin: 0 0 0.5rem 0;
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .header p {
+            color: #94a3b8;
+            margin: 0;
+        }
+
+        .card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 16px;
+            padding: 2rem;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            color: #e2e8f0;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            border-radius: 8px;
+            color: #f1f5f9;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+
+        .cron-description {
+            margin-top: 0.75rem;
+            padding: 0.75rem;
+            border-radius: 8px;
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            font-size: 0.875rem;
+            color: #94a3b8;
+            display: none;
+        }
+
+        .cron-description.show {
+            display: block;
+        }
+
+        .helper-text {
+            color: #64748b;
+            font-size: 0.8rem;
+            margin-top: 0.25rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(71, 85, 105, 0.8);
+            color: #e2e8f0;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(71, 85, 105, 1);
+            transform: translateY(-1px);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+            justify-content: flex-end;
+        }
+
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .alert-error {
+            background: rgba(239, 68, 68, 0.1);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .alert-error::before {
+            content: '⚠️';
+            font-size: 1.2rem;
+        }
+
+        .alert-success {
+            background: rgba(16, 185, 129, 0.1);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .alert-success::before {
+            content: '✓';
+            font-size: 1.2rem;
+        }
+
+        .cleanup-config {
+            border-top: 1px solid rgba(148, 163, 184, 0.1);
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #e2e8f0;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .card {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <nav style="margin-bottom: 1rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; color: #64748b;">
+                <a href="/?tab=scheduled-jobs" style="color: #3b82f6; text-decoration: none;">Scheduled Jobs</a>
+                <span>›</span>
+                <span>Edit Job</span>
+            </div>
+        </nav>
+
+        <div class="header">
+            <h1>Edit Cron Job</h1>
+            <p>Update the schedule pattern and cleanup policy for "<%= job.name %>"</p>
+        </div>
+
+        <% if (error) { %>
+        <div class="alert alert-error">
+            <%= error %>
+        </div>
+        <% } %>
+
+        <% if (message) { %>
+        <div class="alert alert-success">
+            <%= message %>
+        </div>
+        <% } %>
+
+        <div class="card">
+            <form method="POST" action="/cron-jobs/<%= job.id %>/edit">
+                <!-- Job Info (Read-only) -->
+                <div class="section-title">
+                    <span>⏰</span>
+                    Job Information
+                </div>
+                
+                <div class="form-group">
+                    <label>Job Name</label>
+                    <input type="text" value="<%= job.name %>" disabled style="opacity: 0.6;">
+                    <div class="helper-text">Job name cannot be changed</div>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Database</label>
+                        <input type="text" value="<%= job.config.db %>" disabled style="opacity: 0.6;">
+                    </div>
+                    <div class="form-group">
+                        <label>Host</label>
+                        <input type="text" value="<%= job.config.host %>" disabled style="opacity: 0.6;">
+                    </div>
+                </div>
+
+                <!-- Schedule Configuration -->
+                <div class="section-title">
+                    <span>📅</span>
+                    Schedule Configuration
+                </div>
+
+                <div class="form-group">
+                    <label>Schedule Preset</label>
+                    <select name="cronPreset" id="cronPreset">
+                        <option value="custom" <%= !predefinedPatterns.find(p => p.pattern === job.cronPattern) ? 'selected' : '' %>>Custom Pattern</option>
+                        <% predefinedPatterns.forEach(pattern => { %>
+                        <option value="<%= pattern.pattern %>" <%= pattern.pattern === job.cronPattern ? 'selected' : '' %>>
+                            <%= pattern.name %> (<%= pattern.description %>)
+                        </option>
+                        <% }) %>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Custom Cron Pattern</label>
+                    <input 
+                        type="text" 
+                        name="cronPattern" 
+                        id="cronPattern" 
+                        value="<%= job.cronPattern %>" 
+                        placeholder="0 2 * * *"
+                        <%= predefinedPatterns.find(p => p.pattern === job.cronPattern) ? 'readonly style="opacity: 0.6;"' : '' %>
+                    >
+                    <div class="helper-text">Format: minute hour day month weekday (e.g., "0 2 * * *" for daily at 2 AM)</div>
+                    <div class="cron-description" id="cronDescription"></div>
+                </div>
+
+                <!-- Cleanup Configuration -->
+                <div class="cleanup-config">
+                    <div class="section-title">
+                        <span>🧹</span>
+                        Cleanup Configuration
+                    </div>
+
+                    <div class="form-group">
+                        <div class="checkbox-group">
+                            <input 
+                                type="checkbox" 
+                                name="enableCleanup" 
+                                id="enableCleanup"
+                                <%= job.config.cleanup && job.config.cleanup.enabled ? 'checked' : '' %>
+                            >
+                            <label for="enableCleanup">Enable automatic backup cleanup</label>
+                        </div>
+                    </div>
+
+                    <div id="cleanupOptions" <% if (!job.config.cleanup || !job.config.cleanup.enabled) { %>style="display: none;"<% } %>>
+                        <div class="form-group">
+                            <label>Cleanup Method</label>
+                            <select name="cleanupMethod" id="cleanupMethod">
+                                <option value="days" <%= job.config.cleanup && job.config.cleanup.method === 'days' ? 'selected' : '' %>>Delete files older than X days</option>
+                                <option value="count" <%= job.config.cleanup && job.config.cleanup.method === 'count' ? 'selected' : '' %>>Keep only X newest files</option>
+                                <option value="both" <%= job.config.cleanup && job.config.cleanup.method === 'both' ? 'selected' : '' %>>Both conditions (AND logic)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Cleanup Timing</label>
+                            <select name="cleanupTiming">
+                                <option value="after" <%= !job.config.cleanup || job.config.cleanup.timing === 'after' ? 'selected' : '' %>>After backup</option>
+                                <option value="before" <%= job.config.cleanup && job.config.cleanup.timing === 'before' ? 'selected' : '' %>>Before backup</option>
+                            </select>
+                        </div>
+
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Retention Days</label>
+                                <input 
+                                    name="retentionDays" 
+                                    type="number" 
+                                    min="1" 
+                                    max="365" 
+                                    value="<%= job.config.cleanup ? job.config.cleanup.retentionDays || 30 : 30 %>" 
+                                    placeholder="30"
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label>Keep Latest Files</label>
+                                <input 
+                                    name="retentionCount" 
+                                    type="number" 
+                                    min="1" 
+                                    max="1000" 
+                                    value="<%= job.config.cleanup ? job.config.cleanup.retentionCount || 10 : 10 %>" 
+                                    placeholder="10"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <a href="/?tab=scheduled-jobs" class="btn btn-secondary">
+                        <span>← Cancel</span>
+                    </a>
+                    <button type="submit" class="btn btn-primary" id="saveButton">
+                        <span>💾 Save Changes</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const cronPresetSelect = document.getElementById('cronPreset');
+            const cronPatternInput = document.getElementById('cronPattern');
+            const cronDescription = document.getElementById('cronDescription');
+            const enableCleanupCheckbox = document.getElementById('enableCleanup');
+            const cleanupOptions = document.getElementById('cleanupOptions');
+            const saveButton = document.getElementById('saveButton');
+            const form = document.querySelector('form');
+
+            let isValidPattern = true;
+
+            // Handle preset selection
+            cronPresetSelect.addEventListener('change', function() {
+                if (this.value === 'custom') {
+                    cronPatternInput.readOnly = false;
+                    cronPatternInput.style.opacity = '1';
+                    cronPatternInput.focus();
+                } else {
+                    cronPatternInput.value = this.value;
+                    cronPatternInput.readOnly = true;
+                    cronPatternInput.style.opacity = '0.6';
+                    validateAndDescribeCron();
+                }
+            });
+
+            // Handle custom pattern input
+            cronPatternInput.addEventListener('input', function() {
+                if (cronPresetSelect.value === 'custom') {
+                    validateAndDescribeCron();
+                }
+            });
+
+            // Validate and describe cron pattern
+            function validateAndDescribeCron() {
+                const pattern = cronPatternInput.value.trim();
+                if (!pattern) {
+                    cronDescription.style.display = 'none';
+                    isValidPattern = false;
+                    updateSaveButton();
+                    return;
+                }
+
+                fetch('/api/validate-cron', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'pattern=' + encodeURIComponent(pattern)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.valid) {
+                        cronDescription.innerHTML = '✓ ' + data.description;
+                        cronDescription.style.color = '#34d399';
+                        cronDescription.style.borderColor = 'rgba(16, 185, 129, 0.2)';
+                        isValidPattern = true;
+                    } else {
+                        cronDescription.innerHTML = '✗ ' + data.description;
+                        cronDescription.style.color = '#fca5a5';
+                        cronDescription.style.borderColor = 'rgba(239, 68, 68, 0.2)';
+                        isValidPattern = false;
+                    }
+                    cronDescription.style.display = 'block';
+                    updateSaveButton();
+                })
+                .catch(error => {
+                    console.error('Error validating cron pattern:', error);
+                    isValidPattern = false;
+                    updateSaveButton();
+                });
+            }
+
+            // Update save button state
+            function updateSaveButton() {
+                if (isValidPattern) {
+                    saveButton.disabled = false;
+                    saveButton.style.opacity = '1';
+                    saveButton.style.cursor = 'pointer';
+                } else {
+                    saveButton.disabled = true;
+                    saveButton.style.opacity = '0.5';
+                    saveButton.style.cursor = 'not-allowed';
+                }
+            }
+
+            // Handle form submission
+            form.addEventListener('submit', function(e) {
+                if (!isValidPattern) {
+                    e.preventDefault();
+                    alert('Please enter a valid cron pattern before saving.');
+                    return false;
+                }
+
+                // Show confirmation dialog
+                const confirmMessage = 'Are you sure you want to update this cron job? This will restart the scheduled job if it\'s currently enabled.';
+                if (!confirm(confirmMessage)) {
+                    e.preventDefault();
+                    return false;
+                }
+
+                // Disable form to prevent double submission
+                saveButton.disabled = true;
+                saveButton.innerHTML = '<span>⏳ Saving...</span>';
+            });
+
+            // Handle cleanup options visibility
+            enableCleanupCheckbox.addEventListener('change', function() {
+                if (this.checked) {
+                    cleanupOptions.style.display = 'block';
+                } else {
+                    cleanupOptions.style.display = 'none';
+                }
+            });
+
+            // Initial validation
+            validateAndDescribeCron();
+        });
+    </script>
+</body>
+
+</html>

@@ -114,6 +114,30 @@ async function loadJobsAsync() {
 }
 
 /**
+ * Load jobs from file without credential decryption (for display/edit purposes)
+ */
+function loadJobsWithoutDecryption() {
+    try {
+        if (fs.existsSync(JOBS_FILE)) {
+            const data = fs.readFileSync(JOBS_FILE, 'utf8');
+            const jobs = JSON.parse(data);
+
+            // Return jobs without decrypting passwords
+            return jobs.map((job) => ({
+                ...job,
+                config: {
+                    ...job.config,
+                    password: undefined // Don't expose encrypted password
+                }
+            }));
+        }
+    } catch (error) {
+        console.error('Error loading jobs:', error);
+    }
+    return [];
+}
+
+/**
  * Load jobs from file with credential decryption (synchronous fallback)
  */
 function loadJobs() {
@@ -559,6 +583,14 @@ function getAllCronJobs() {
 }
 
 /**
+ * Get a specific cron job without decryption (for editing purposes)
+ */
+function getCronJobForEdit(jobId) {
+    const jobs = loadJobsWithoutDecryption();
+    return jobs.find((j) => j.id === jobId);
+}
+
+/**
  * Get a specific cron job (returns decrypted job)
  */
 function getCronJob(jobId) {
@@ -671,6 +703,7 @@ export {
     encrypt,
     decrypt,
     loadJobs,
+    loadJobsWithoutDecryption,
     loadJobsAsync,
     saveJobs,
     saveJobsAsync,
@@ -681,6 +714,7 @@ export {
     deleteCronJob,
     getAllCronJobs,
     getCronJob,
+    getCronJobForEdit,
     initializeCronManager,
     getPredefinedPatterns,
     createCronJobWithCredentialRef,
