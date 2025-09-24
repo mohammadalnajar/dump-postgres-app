@@ -28,6 +28,10 @@ const activeTasks = new Map();
 // Track running backup jobs to prevent concurrent executions
 const runningJobs = new Set();
 
+// Track system sleep/wake cycles to handle missed executions gracefully
+let lastWakeTime = Date.now();
+let systemSleepDetected = false;
+
 /**
  * Encrypt sensitive data
  */
@@ -247,6 +251,52 @@ function getPasswordFromCredentialRef(credentialRef) {
 }
 
 /**
+ * Detect system sleep/wake cycles
+ * This helps us understand when missed executions are due to system sleep
+ */
+function detectSystemSleep() {
+    const now = Date.now();
+    const timeSinceLastCheck = now - lastWakeTime;
+
+    // If more than 90 seconds have passed since last check, likely system was asleep
+    // (we check every 60 seconds, so 90s gives some buffer)
+    if (timeSinceLastCheck > 90000) {
+        systemSleepDetected = true;
+        console.log(
+            `🛌 System sleep detected - ${Math.round(
+                timeSinceLastCheck / 1000
+            )}s gap since last check`
+        );
+        console.log(
+            '📢 Any missed cron executions during this time are due to system sleep, not performance issues'
+        );
+
+        // Reset the flag after 5 minutes (to avoid false positives)
+        setTimeout(() => {
+            systemSleepDetected = false;
+        }, 5 * 60 * 1000);
+    }
+
+    lastWakeTime = now;
+}
+
+/**
+ * Enhanced cron job execution that handles sleep/wake gracefully
+ */
+async function executeBackupJobWithSleepHandling(job, isCatchupExecution = false) {
+    const executionType = isCatchupExecution ? 'catch-up' : 'scheduled';
+    console.log(`🔄 Executing ${executionType} backup job: ${job.name}`);
+
+    if (systemSleepDetected && !isCatchupExecution) {
+        console.log(
+            `💤 System recently woke from sleep - executing catch-up backup for ${job.name}`
+        );
+    }
+
+    return await executeBackupJob(job);
+}
+
+/**
  * Validate cron pattern
  */
 function isValidCronPattern(pattern) {
@@ -450,7 +500,7 @@ async function executeBackupJob(job) {
 }
 
 /**
- * Start a cron job (improved to prevent blocking)
+ * Start a cron job (improved to prevent blocking and handle sleep/wake cycles)
  */
 function startCronJob(job) {
     if (activeTasks.has(job.id)) {
@@ -460,11 +510,14 @@ function startCronJob(job) {
     const task = cron.schedule(
         job.cronPattern,
         async () => {
+            // Detect if system was sleeping
+            detectSystemSleep();
+
             // Execute backup job asynchronously to prevent blocking
             // Use setImmediate to ensure the cron callback returns quickly
             setImmediate(async () => {
                 try {
-                    await executeBackupJob(job);
+                    await executeBackupJobWithSleepHandling(job);
                 } catch (error) {
                     console.error(`Unhandled error in cron job ${job.name}:`, error);
                 }
@@ -620,6 +673,11 @@ function initializeCronManager() {
 
     // Set up periodic health logging (every hour)
     setInterval(logCronHealth, 60 * 60 * 1000);
+
+    // Set up sleep detection monitoring (every 60 seconds)
+    setInterval(detectSystemSleep, 60 * 1000);
+
+    console.log('🛌 Sleep/wake cycle monitoring enabled');
 }
 
 /**
@@ -687,6 +745,12 @@ function logCronHealth() {
     console.log(`Enabled jobs: ${status.enabledJobs}`);
     console.log(`Active scheduled jobs: ${status.activeJobs}`);
     console.log(`Currently running jobs: ${status.runningJobs}`);
+
+    if (systemSleepDetected) {
+        console.log(
+            '💤 System sleep recently detected - missed executions may be due to sleep/wake cycles'
+        );
+    }
 
     if (status.runningJobs > 0) {
         console.log('⚠️  Some jobs are currently running - this is normal during backup execution');
