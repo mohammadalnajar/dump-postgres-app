@@ -1,0 +1,64 @@
+version: '3.8'
+
+# Production override - optimized for VPS deployment with nginx
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+    app:
+        # Remove direct port exposure for nginx proxy
+        ports: []
+        networks:
+            - proxy
+            - db_net
+        environment:
+            NODE_ENV: production
+            # Disable direct port access logs
+            NO_PORT_LOGS: 'true'
+            # Force secure cookies behind nginx proxy
+            TRUST_PROXY: 'true'
+
+        # Enhanced security for production
+        security_opt:
+            - no-new-privileges:true
+            - apparmor:docker-default
+
+        # Read-only filesystem for better security
+        read_only: true
+
+        # Tmpfs for temporary files
+        tmpfs:
+            - /tmp:noexec,nosuid,size=100M
+            - /app/logs:noexec,nosuid,size=50M
+
+        # Resource limits
+        deploy:
+            resources:
+                limits:
+                    memory: 512M
+                    cpus: '0.5'
+                reservations:
+                    memory: 256M
+                    cpus: '0.25'
+
+        # Logging configuration
+        logging:
+            driver: 'json-file'
+            options:
+                max-size: '10m'
+                max-file: '3'
+
+        # Enhanced health check
+        healthcheck:
+            test: ['CMD-SHELL', 'curl -f http://localhost:8080/health || exit 1']
+            interval: 30s
+            timeout: 5s
+            retries: 3
+            start_period: 40s
+
+networks:
+    proxy:
+        external: true
+        name: proxy
+    db_net:
+        external: true
+        name: db_net

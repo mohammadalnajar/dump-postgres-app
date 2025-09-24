@@ -74,6 +74,31 @@ restart-prod-net: down-prod-net up-prod-net
 prod-net: build-prod-net up-prod-net
 	@echo "Production environment with external networks started."
 
+# Enhanced production deployment with security checks
+deploy-prod: pre-deploy-checks setup-networks build-prod-net up-prod-net post-deploy-checks
+	@echo "🚀 Production deployment completed successfully!"
+
+pre-deploy-checks:
+	@echo "🔍 Running pre-deployment checks..."
+	@test -f .env || (echo "❌ Missing .env file! Copy from .env.prod-template" && exit 1)
+	@grep -q "REPLACE_WITH" .env && (echo "❌ Found default values in .env - please customize!" && exit 1) || echo "✅ Environment variables look customized"
+	@docker --version >/dev/null 2>&1 || (echo "❌ Docker not found" && exit 1)
+	@echo "✅ Pre-deployment checks passed"
+
+setup-networks:
+	@echo "🌐 Setting up Docker networks..."
+	@docker network inspect proxy >/dev/null 2>&1 || docker network create proxy
+	@docker network inspect db_net >/dev/null 2>&1 || docker network create db_net
+	@echo "✅ Networks ready"
+
+post-deploy-checks:
+	@echo "🏥 Running post-deployment health checks..."
+	@sleep 10
+	@docker ps | grep -q dump_postgres_app || (echo "❌ Container not running!" && exit 1)
+	@echo "✅ Container is running"
+	@docker exec dump_postgres_app curl -f http://localhost:8080/health >/dev/null 2>&1 || (echo "❌ Health check failed!" && exit 1)
+	@echo "✅ Application is healthy"
+
 # =========================
 # CLEANUP
 # =========================

@@ -1,0 +1,65 @@
+# Production-optimized Dockerfile for dump-postgres-app
+
+# --- Builder Stage ---
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apk add --no-cache --virtual .build-deps \
+    python3 make g++
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci --only=production && npm cache clean --force
+
+# Remove build dependencies
+RUN apk del .build-deps
+
+# Copy application code
+COPY src ./src
+COPY scripts ./scripts
+
+# --- Production Stage ---
+FROM node:20-alpine AS runner
+
+# Install runtime dependencies
+RUN apk add --no-cache \
+    postgresql16-client \
+    curl \
+    ca-certificates \
+    dumb-init \
+    && rm -rf /var/cache/apk/*
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001 -G nodejs
+
+WORKDIR /app
+
+# Copy from builder
+COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nodejs:nodejs /app/src ./src
+COPY --from=builder --chown=nodejs:nodejs /app/scripts ./scripts
+COPY --chown=nodejs:nodejs package*.json ./
+
+# Create required directories with proper permissions
+RUN mkdir -p /app/backups /app/logs /tmp/app && \
+    chown -R nodejs:nodejs /app /tmp/app && \
+    chmod 750 /app/backups /app/logs
+
+# Switch to non-root user
+USER nodejs
+
+# Expose port
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+# Use dumb-init for proper signal handling
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "src/server.js"]
