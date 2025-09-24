@@ -28,7 +28,7 @@ import {
     isValidCronPattern,
     describeCronPattern,
     getPredefinedPatterns
-} from './lib/cronManager.js';
+} from './lib/cronManagerSecure.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
