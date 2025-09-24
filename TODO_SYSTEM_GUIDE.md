@@ -27,7 +27,10 @@ I've implemented a comprehensive TODO tracking system for your PostgreSQL dump a
 {
   "todos": "bash scripts/scan-todos.sh",
   "todos:watch": "watch -n 30 'bash scripts/scan-todos.sh'",
-  "plan": "echo '📋 Opening TODO.md and JOURNAL.md for planning...' && code TODO.md JOURNAL.md"
+  "plan": "echo '📋 Opening TODO.md and JOURNAL.md for planning...' && code TODO.md JOURNAL.md",
+  "setup:hooks": "bash scripts/setup-hooks.sh",
+  "postinstall": "npm run setup:hooks"
+}
 }
 ```
 
@@ -35,11 +38,19 @@ I've implemented a comprehensive TODO tracking system for your PostgreSQL dump a
 - `make todos` - Scan codebase for TODO comments
 - `make todo-stats` - Show TODO statistics and progress
 - `make plan` - Open planning files
+- `make setup-hooks` - Install git hooks
 
 ### 6. **VS Code Integration** (`.vscode/settings.json`)
 - ✅ TODO Tree extension configuration
 - ✅ Custom highlighting for different TODO types
 - ✅ Organized tag groups by priority
+
+### 7. **Git Hooks Integration** (`.githooks/` + `scripts/setup-hooks.sh`)
+- ✅ **Tracked git hooks** - Committed and shared with team
+- ✅ **Pre-commit TODO checking** - Warns about TODO comments in code
+- ✅ **Automatic setup** - Runs during `npm install`
+- ✅ **Bypass options** - Use `--no-verify` or environment variables
+- ✅ **Cross-platform** - Works on all operating systems
 
 ### 7. **Git Integration** (`.git/hooks/pre-commit`)
 - ✅ Pre-commit hook that warns about TODO comments

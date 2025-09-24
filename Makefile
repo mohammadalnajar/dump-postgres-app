@@ -127,6 +127,10 @@ plan:
 	@echo "📋 Opening planning files..."
 	@code TODO.md JOURNAL.md
 
+setup-hooks:
+	@echo "🔧 Setting up git hooks..."
+	@bash scripts/setup-hooks.sh
+
 todo-stats:
 	@echo "📊 TODO Statistics:"
 	@echo "-------------------"

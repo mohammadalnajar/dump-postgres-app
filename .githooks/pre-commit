@@ -1,0 +1,69 @@
+#!/bin/bash
+
+# Pre-commit hook to remind about TODOs
+# This will warn you if you're committing files with TODO comments
+# 
+# To bypass this check, use: git commit --no-verify
+# Or set environment variable: SKIP_TODO_CHECK=1
+
+# Check if TODO check should be skipped
+if [[ "$SKIP_TODO_CHECK" == "1" ]]; then
+    echo "⏭️  Skipping TODO check (SKIP_TODO_CHECK=1)"
+    exit 0
+fi
+
+echo "🔍 Checking for TODOs in staged files..."
+
+# Get list of staged files
+staged_files=$(git diff --cached --name-only --diff-filter=ACM)
+
+# Filter out files that are supposed to contain TODOs
+exclude_pattern="TODO\.md|JOURNAL\.md|TODO_SYSTEM_GUIDE\.md|.*\.md"
+
+# Check for TODO comments in staged files
+todos_found=""
+for file in $staged_files; do
+    if [[ -f "$file" ]] && [[ ! "$file" =~ $exclude_pattern ]]; then
+        if grep -q -E "TODO|FIXME|HACK|BUG" "$file"; then
+            todos_found="$todos_found\n  - $file"
+        fi
+    fi
+done
+
+if [[ -n "$todos_found" ]]; then
+    echo -e "\n⚠️  WARNING: Files with TODO comments are being committed:"
+    echo -e "$todos_found"
+    echo -e "\n💡 Consider updating TODO.md with these items before committing."
+    echo -e "   Run: make todos to see all TODO items"
+    echo -e "\n🔄 Continue with commit? (y/N) "
+    echo -e "   💡 Tip: Use 'git commit --no-verify' to skip this check"
+    
+    # Multiple approaches to read user input in git hooks
+    response=""
+    if [ -t 0 ]; then
+        # If stdin is a terminal
+        read -r response
+    elif [ -r /dev/tty ]; then
+        # Try to read from controlling terminal
+        read -r response < /dev/tty
+    else
+        # Fallback: assume they want to proceed (for automated environments)
+        echo -e "\n⚠️  Unable to read from terminal. Use --no-verify to skip this check."
+        echo "❌ Commit cancelled."
+        exit 1
+    fi
+    
+    case "$response" in
+        [Yy]|[Yy][Ee][Ss])
+            echo "✅ Proceeding with commit..."
+            ;;
+        *)
+            echo "❌ Commit cancelled. Update your TODOs and try again."
+            echo "💡 Use 'git commit --no-verify' to skip this check if needed."
+            exit 1
+            ;;
+    esac
+fi
+
+echo "✅ Pre-commit check passed!"
+exit 0

@@ -9,7 +9,9 @@
         "dev": "NODE_ENV=development node src/server.js",
         "todos": "bash scripts/scan-todos.sh",
         "todos:watch": "watch -n 30 'bash scripts/scan-todos.sh'",
-        "plan": "echo '📋 Opening TODO.md and JOURNAL.md for planning...' && code TODO.md JOURNAL.md"
+        "plan": "echo '📋 Opening TODO.md and JOURNAL.md for planning...' && code TODO.md JOURNAL.md",
+        "setup:hooks": "bash scripts/setup-hooks.sh",
+        "postinstall": "npm run setup:hooks"
     },
     "dependencies": {
         "basic-auth": "^2.0.1",
