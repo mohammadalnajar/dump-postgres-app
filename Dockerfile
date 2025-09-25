@@ -1,54 +1,62 @@
-# Dockerfile for dump-postgres-app
+# Production Dockerfile with alternative registry support
+# Use this if Docker Hub authentication fails
 
 # --- Builder Stage ---
-FROM node:20-alpine AS builder
+FROM public.ecr.aws/docker/library/node:20-alpine AS builder
 
 WORKDIR /app
 
-# 1. Copy package files
+# Copy package files
 COPY package*.json ./
 
-# 2. Install ALL dependencies (including devDependencies needed for build if any)
-RUN npm ci
+# Install dependencies
+RUN npm ci --only=production && npm cache clean --force
 
-# 3. Copy the rest of the application code
-COPY . .
+# Copy application code
+COPY src ./src
+COPY scripts ./scripts
 
 # --- Production Stage ---
-FROM node:20-alpine AS runner
+FROM public.ecr.aws/docker/library/node:20-alpine AS runner
 
 WORKDIR /app
 
 ENV NODE_ENV=production
 
-# 1) Install PostgreSQL client, curl (for healthchecks), and bash
-RUN apk add --no-cache postgresql16-client bash curl ca-certificates
+# Install runtime dependencies
+RUN apk add --no-cache \
+    postgresql17-client \
+    curl \
+    bash \
+    ca-certificates \
+    dumb-init \
+    && rm -rf /var/cache/apk/*
 
-# 2) Create a non-root user for security
+# Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
+    adduser -S nodejs -u 1001 -G nodejs
 
-# Copy necessary artifacts from the builder stage
-COPY --from=builder /app/package*.json ./
-RUN npm ci --only=production && npm cache clean --force
+# Copy from builder
+COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nodejs:nodejs /app/src ./src
+COPY --from=builder --chown=nodejs:nodejs /app/scripts ./scripts
+COPY --chown=nodejs:nodejs package*.json ./
 
-COPY --from=builder /app/src ./src
-COPY --from=builder /app/scripts ./scripts
-COPY --from=builder /app/.env.example ./.env.example
+# Create required directories
+RUN mkdir -p /app/backups /app/logs && \
+    chown -R nodejs:nodejs /app && \
+    chmod 750 /app/backups /app/logs
 
-# Create backups directory and set proper permissions
-RUN mkdir -p /app/backups && \
-    chown -R nodejs:nodejs /app
-
-# 3) Switch to non-root user
+# Switch to non-root user
 USER nodejs
 
-# Expose the port the app runs on
+# Expose port
 EXPOSE 8080
 
-# Add health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:8080/health || exit 1
 
-# Start the app
+# Use dumb-init for proper signal handling
+ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "src/server.js"]
