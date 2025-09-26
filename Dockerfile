@@ -15,6 +15,9 @@ COPY package*.json ./
 COPY src ./src
 COPY scripts ./scripts
 
+# Skip postinstall scripts during Docker builds
+ENV IN_DOCKER=true
+
 # Install dependencies
 RUN npm ci --only=production && npm cache clean --force
 

@@ -11,7 +11,7 @@
         "todos:watch": "watch -n 30 'bash scripts/scan-todos.sh'",
         "plan": "echo '📋 Opening TODO.md and JOURNAL.md for planning...' && code TODO.md JOURNAL.md",
         "setup:hooks": "bash scripts/setup-hooks.sh",
-        "postinstall": "npm run setup:hooks"
+        "postinstall": "if [ \"$IN_DOCKER\" = \"true\" ] || [ \"$CI\" = \"true\" ]; then echo 'Skipping hooks (Docker/CI)'; else npm run setup:hooks; fi"
     },
     "dependencies": {
         "basic-auth": "^2.0.1",
