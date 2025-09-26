@@ -2,7 +2,9 @@
 # Use this if Docker Hub authentication fails
 
 # --- Builder Stage ---
-FROM public.ecr.aws/docker/library/node:20-alpine AS builder
+FROM node:20-alpine AS builder
+
+RUN apk add --no-cache bash
 
 WORKDIR /app
 
@@ -17,7 +19,7 @@ COPY src ./src
 COPY scripts ./scripts
 
 # --- Production Stage ---
-FROM public.ecr.aws/docker/library/node:20-alpine AS runner
+FROM node:20-alpine AS runner
 
 WORKDIR /app
 
