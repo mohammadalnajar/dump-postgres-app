@@ -496,7 +496,6 @@ app.post(
     '/api/validate-cron',
     USE_SESSION_AUTH ? requireAuth : (req, res, next) => next(),
     (req, res) => {
-        console.log('Validating cron pattern:', req.body); // Debug log
         const { pattern } = req.body;
         const isValid = isValidCronPattern(pattern);
         const description = isValid ? describeCronPattern(pattern) : 'Invalid pattern';
