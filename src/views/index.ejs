@@ -942,8 +942,9 @@
 
                         <% if (files && files.length > 0) { %>
                         <div style="margin-bottom: 1rem; font-size: 1rem; color: #64748b;">
-                            <strong>Total Size:</strong>
-                            <%= (files.reduce((acc, f) => acc + f.size, 0) / 1024 / 1024).toFixed(2) %> MB
+                            <strong>Total Files:</strong> <%= files.length %>
+                            &nbsp;|&nbsp;
+                            <strong>Total Size:</strong> <%= (files.reduce((acc, f) => acc + f.size, 0) / 1024 / 1024).toFixed(2) %> MB
                         </div>
                         <table class="data-table">
                             <thead>
