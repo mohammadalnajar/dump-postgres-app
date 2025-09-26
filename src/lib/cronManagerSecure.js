@@ -7,7 +7,7 @@ import { buildPgDumpArgs, runPgDump, extensionFor, ensureDir } from './pgdump.js
 import { sanitizeName, timestamp } from './sanitize.js';
 import { cleanupBackups, formatCleanupResult } from './backupCleanup.js';
 
-const JOBS_FILE = path.join(process.cwd(), 'cron-jobs.json');
+const JOBS_FILE = path.join(process.cwd(), 'data/cron-jobs.json');
 const BACKUP_DIR = path.join(process.cwd(), 'backups');
 
 // Encryption key for credentials (should be from environment)
