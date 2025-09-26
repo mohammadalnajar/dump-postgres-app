@@ -952,29 +952,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <% files.forEach(f => { 
-                                    // Detect file source based on naming pattern
-                                    const nameParts = f.name.split('_');
-                                    let fileSource = 'Manual';
-                                    let sourceIcon = '👤';
-                                    let sourceCssClass = 'source-manual';
-                                    
-                                    // Check if it matches cron job pattern: db_jobname_timestamp.ext
-                                    if (nameParts.length >= 3) {
-                                        // Look for matching cron job
-                                        // Use the same sanitization logic as in sanitize.js: replace /[^a-zA-Z0-9._-]/g with '_'
-                                        const matchingJob = cronJobs.find(job => {
-                                            const sanitizedJobName = job.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-                                            return f.name.includes(`_${sanitizedJobName}_`);
-                                        });
-                                        
-                                        if (matchingJob) {
-                                            fileSource = matchingJob.name;
-                                            sourceIcon = '⏰';
-                                            sourceCssClass = 'source-cron';
-                                        }
-                                    }
-                                %>
+                                <% files.forEach(f => { %>
                                 <tr>
                                     <td>
                                         <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -984,9 +962,9 @@
                                     </td>
                                     <td>
                                         <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                            <span class="<%= sourceCssClass %>"><%- sourceIcon %></span>
-                                            <span class="<%= sourceCssClass %>" style="font-size: 0.9rem;">
-                                                <%= fileSource %>
+                                            <span class="<%= f.source.sourceCssClass %>"><%- f.source.sourceIcon %></span>
+                                            <span class="<%= f.source.sourceCssClass %>" style="font-size: 0.9rem;">
+                                                <%= f.source.jobName %>
                                             </span>
                                         </div>
                                     </td>

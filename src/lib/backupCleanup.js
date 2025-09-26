@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { stat } from 'node:fs/promises';
+import { removeFileFromAllJobs } from './cronManagerSecure.js';
 
 /**
  * Clean up old backup files based on retention policy
@@ -118,6 +119,14 @@ export async function cleanupBackups(backupDir, cleanupConfig, filePattern = nul
                 try {
                     await fs.unlink(file.path);
                     result.deleted.push(file.name);
+
+                    // Clean up file reference from cron jobs tracking
+                    try {
+                        removeFileFromAllJobs(file.name);
+                    } catch (cronCleanupError) {
+                        console.warn('Failed to clean up cron job reference:', cronCleanupError);
+                        // Don't fail the deletion for this
+                    }
                 } catch (error) {
                     result.errors.push(`Failed to delete ${file.name}: ${error.message}`);
                 }

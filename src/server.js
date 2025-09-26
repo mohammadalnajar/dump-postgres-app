@@ -30,7 +30,9 @@ import {
     isValidCronPattern,
     describeCronPattern,
     getPredefinedPatterns,
-    loadJobsWithoutDecryption
+    loadJobsWithoutDecryption,
+    getFileSource,
+    removeFileFromAllJobs
 } from './lib/cronManagerSecure.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -193,6 +195,15 @@ app.get('/', USE_SESSION_AUTH ? requireAuth : (req, res, next) => next(), (req, 
     const files = listBackups(BACKUP_DIR);
     const cronJobs = getAllCronJobs();
 
+    // Add file source information to each file
+    const filesWithSource = files.map((file) => {
+        const sourceInfo = getFileSource(file.name);
+        return {
+            ...file,
+            source: sourceInfo
+        };
+    });
+
     // Get message from query parameters
     let message = null;
     if (req.query.message) {
@@ -203,7 +214,7 @@ app.get('/', USE_SESSION_AUTH ? requireAuth : (req, res, next) => next(), (req, 
 
     res.render('index', {
         title: TITLE,
-        files,
+        files: filesWithSource,
         cronJobs,
         message,
         predefinedPatterns: getPredefinedPatterns(),
@@ -695,7 +706,13 @@ app.post(
         const name = path.basename(req.params.name);
         const p = path.join(BACKUP_DIR, name);
         if (!fs.existsSync(p)) return res.status(404).send('Not found');
+
+        // Remove file from filesystem
         fs.rmSync(p, { recursive: true, force: true });
+
+        // Clean up file reference from cron jobs tracking
+        removeFileFromAllJobs(name);
+
         res.redirect('/');
     }
 );

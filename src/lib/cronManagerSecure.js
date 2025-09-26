@@ -469,6 +469,17 @@ async function executeBackupJob(job) {
                 jobs[jobIndex].lastRun = new Date().toISOString();
                 jobs[jobIndex].lastStatus = 'success';
                 jobs[jobIndex].lastResult = resultMessage;
+
+                // Add the created file to the createdFiles array
+                if (!jobs[jobIndex].createdFiles) {
+                    jobs[jobIndex].createdFiles = [];
+                }
+                jobs[jobIndex].createdFiles.push({
+                    filename: baseName,
+                    created: new Date().toISOString(),
+                    size: null // Size will be determined when file is read
+                });
+
                 await saveJobsAsync(jobs);
             }
         } catch (saveError) {
@@ -564,7 +575,8 @@ function createCronJob(jobData) {
         created: new Date().toISOString(),
         lastRun: null,
         lastStatus: null,
-        lastResult: null
+        lastResult: null,
+        createdFiles: [] // Track all files created by this cron job
     };
 
     const jobs = loadJobs();
@@ -656,6 +668,22 @@ function getCronJob(jobId) {
  */
 function initializeCronManager() {
     const jobs = loadJobs();
+
+    // Migration: Add createdFiles array to existing jobs that don't have it
+    let needsSave = false;
+    for (const job of jobs) {
+        if (!job.createdFiles) {
+            job.createdFiles = [];
+            needsSave = true;
+        }
+    }
+
+    // Save if we added createdFiles to any jobs
+    if (needsSave) {
+        console.log('🔄 Migrating existing cron jobs to include createdFiles tracking...');
+        saveJobs(jobs);
+    }
+
     const enabledJobs = jobs.filter((job) => job.enabled);
 
     console.log(`Initializing ${enabledJobs.length} enabled cron jobs with encrypted storage...`);
@@ -763,6 +791,68 @@ function logCronHealth() {
     console.log('===============================\n');
 }
 
+/**
+ * Get file source information for a given filename
+ * Returns the cron job that created the file, or null if it's a manual backup
+ */
+function getFileSource(filename) {
+    const jobs = loadJobsWithoutDecryption(); // Use without decryption for faster lookup
+
+    for (const job of jobs) {
+        if (job.createdFiles && job.createdFiles.length > 0) {
+            const fileMatch = job.createdFiles.find((file) => file.filename === filename);
+            if (fileMatch) {
+                return {
+                    jobId: job.id,
+                    jobName: job.name,
+                    source: 'cron',
+                    sourceIcon: '⏰',
+                    sourceCssClass: 'source-cron',
+                    createdAt: fileMatch.created
+                };
+            }
+        }
+    }
+
+    // If no match found, it's a manual backup
+    return {
+        jobId: null,
+        jobName: 'Manual',
+        source: 'manual',
+        sourceIcon: '👤',
+        sourceCssClass: 'source-manual',
+        createdAt: null
+    };
+}
+
+/**
+ * Remove a file from all cron job createdFiles arrays (called when file is deleted)
+ */
+function removeFileFromAllJobs(filename) {
+    try {
+        const jobs = loadJobs();
+        let needsSave = false;
+
+        for (const job of jobs) {
+            if (job.createdFiles && job.createdFiles.length > 0) {
+                const initialLength = job.createdFiles.length;
+                job.createdFiles = job.createdFiles.filter((file) => file.filename !== filename);
+                if (job.createdFiles.length !== initialLength) {
+                    needsSave = true;
+                }
+            }
+        }
+
+        if (needsSave) {
+            saveJobs(jobs);
+            console.log(`🗑️  Removed file reference "${filename}" from cron job tracking`);
+        }
+    } catch (error) {
+        console.warn('Failed to clean up file reference from cron jobs:', error);
+        // Don't fail the deletion for this
+    }
+}
+
 export {
     encrypt,
     decrypt,
@@ -784,5 +874,7 @@ export {
     createCronJobWithCredentialRef,
     getPasswordFromCredentialRef,
     getCronJobStatus,
-    logCronHealth
+    logCronHealth,
+    getFileSource,
+    removeFileFromAllJobs
 };
