@@ -962,10 +962,11 @@
                                     // Check if it matches cron job pattern: db_jobname_timestamp.ext
                                     if (nameParts.length >= 3) {
                                         // Look for matching cron job
-                                        const potentialJobName = nameParts.slice(1, -1).join('_');
-                                        const matchingJob = cronJobs.find(job => 
-                                            f.name.includes(`_${job.name.replace(/[^a-zA-Z0-9]/g, '_')}_`)
-                                        );
+                                        // Use the same sanitization logic as in sanitize.js: replace /[^a-zA-Z0-9._-]/g with '_'
+                                        const matchingJob = cronJobs.find(job => {
+                                            const sanitizedJobName = job.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+                                            return f.name.includes(`_${sanitizedJobName}_`);
+                                        });
                                         
                                         if (matchingJob) {
                                             fileSource = matchingJob.name;
