@@ -102,21 +102,21 @@ post-deploy-checks:
 # =========================
 # CLEANUP
 # =========================
-# clean:
-# 	@echo "Cleaning up containers and images..."
-# 	-@docker rm -f $(APP_DEV) $(APP_PROD) 2>/dev/null || true
-# 	@docker system prune -f
-# 	@echo "Cleanup complete"
+clean:
+	@echo "Cleaning up containers and images..."
+	-@docker rm -f $(APP_DEV) $(APP_PROD) 2>/dev/null || true
+	@docker system prune -f
+	@echo "Cleanup complete"
 
-# clean-volumes:
-# 	@echo "WARNING: This will remove backup volumes!"
-# 	@read -p "Are you sure? [y/N] " -n 1 -r; \
-# 	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
-# 		docker volume prune -f; \
-# 		echo "Volumes cleaned"; \
-# 	else \
-# 		echo "Cancelled"; \
-# 	fi
+clean-volumes:
+	@echo "WARNING: This will remove backup volumes!"
+	@read -p "Are you sure? [y/N] " -n 1 -r; \
+	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+		docker volume prune -f; \
+		echo "Volumes cleaned"; \
+	else \
+		echo "Cancelled"; \
+	fi
 
 # =========================
 # HEALTH CHECKS
