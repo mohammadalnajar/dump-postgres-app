@@ -58,6 +58,8 @@ services:
             TRUST_PROXY: ${TRUST_PROXY:-false}
 
             NODE_ENV: production
+            
+        user: "1001:1001"
         volumes:
             - ./backups:/app/backups
         networks:
