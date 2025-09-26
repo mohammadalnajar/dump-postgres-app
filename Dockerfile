@@ -11,12 +11,13 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
-
 # Copy application code
 COPY src ./src
 COPY scripts ./scripts
+
+# Install dependencies
+RUN npm ci --only=production && npm cache clean --force
+
 
 # --- Production Stage ---
 FROM node:20-alpine AS runner
