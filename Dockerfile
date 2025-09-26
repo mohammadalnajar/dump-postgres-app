@@ -53,6 +53,10 @@ RUN mkdir -p /app/backups /app/logs && \
     chown -R nodejs:nodejs /app && \
     chmod 750 /app/backups /app/logs
 
+RUN mkdir -p /app/data && \
+    chown -R nodejs:nodejs /app/data && \
+    chmod 700 /app/data
+
 # Switch to non-root user
 USER nodejs
 
