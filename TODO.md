@@ -17,6 +17,8 @@
 - [ ] **FEAT-002**: Implement backup verification (test restore functionality)
 - [ ] **FEAT-003**: Add progress indicators for long-running backup operations
 - [ ] **FEAT-004**: Support for multiple database types (MySQL, MongoDB)
+- [ ] **FEAT-005**: Implement saving db credentials securely for repeated use
+- [ ] **FEAT-006**: Implement running queries on multiple databases in one go
 
 ## 🟡 **Medium Priority**
 
