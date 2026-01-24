@@ -7,7 +7,45 @@ APP_PROD = dump_postgres_app
 APP_DEV = dump_postgres_app_dev
 
 # ==== helpers ====
-.PHONY: ps logs logs-dev status build-dev up-dev down-dev build-prod up-prod down-prod clean
+.PHONY: help ps logs logs-dev status validate update build-dev up-dev down-dev redeploy-dev build-prod up-prod down-prod redeploy-prod clean
+
+help:
+	@echo "╔════════════════════════════════════════════════════════════════╗"
+	@echo "║         PostgreSQL Dump App - Makefile Commands               ║"
+	@echo "╚════════════════════════════════════════════════════════════════╝"
+	@echo ""
+	@echo "📋 MONITORING"
+	@echo "  make ps              - List all Docker containers"
+	@echo "  make status          - Show app container status"
+	@echo "  make logs            - Follow production logs"
+	@echo "  make logs-dev        - Follow development logs"
+	@echo ""
+	@echo "🔍 VALIDATION & UPDATES"
+	@echo "  make validate        - Run pre-deployment checks"
+	@echo "  make update          - Pull latest changes from git"
+	@echo ""
+	@echo "💻 DEVELOPMENT"
+	@echo "  make build-dev       - Build development image"
+	@echo "  make up-dev          - Start development container"
+	@echo "  make down-dev        - Stop development container"
+	@echo "  make redeploy-dev    - Quick redeploy (stop→build→start→logs)"
+	@echo "  make dev             - Build and start dev environment"
+	@echo ""
+	@echo "🚀 PRODUCTION"
+	@echo "  make build-prod      - Build production image"
+	@echo "  make up-prod         - Start production container"
+	@echo "  make down-prod       - Stop production container"
+	@echo "  make redeploy-prod   - Safe redeploy with health checks"
+	@echo "  make prod            - Build and start production"
+	@echo ""
+	@echo "🔧 MAINTENANCE"
+	@echo "  make clean           - Remove all containers and volumes"
+	@echo ""
+	@echo "💡 COMMON WORKFLOWS"
+	@echo "  After code changes:    make redeploy-dev"
+	@echo "  After git pull:        make update && make redeploy-dev"
+	@echo "  Production deploy:     make validate && make redeploy-prod"
+	@echo ""
 
 ps:
 	@docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}"
@@ -26,6 +64,59 @@ logs-dev:
 	@docker logs -f $(APP_DEV)
 
 # =========================
+# VALIDATION & UPDATES
+# =========================
+validate:
+	@echo "🔍 Running pre-deployment validation..."
+	@echo ""
+	@# Check Docker daemon
+	@docker info >/dev/null 2>&1 || (echo "❌ Docker daemon not running!" && exit 1)
+	@echo "✅ Docker daemon is running"
+	@# Check .env file
+	@test -f .env || (echo "⚠️  Warning: .env file not found" && exit 0)
+	@echo "✅ .env file exists"
+	@# Check for default values in .env
+	@grep -q "REPLACE_WITH" .env 2>/dev/null && echo "⚠️  Warning: Found default values in .env - customize before production!" || echo "✅ .env appears customized"
+	@# Check for uncommitted changes
+	@if [ -d .git ]; then \
+		if [ -n "$$(git status --porcelain)" ]; then \
+			echo "⚠️  Warning: Uncommitted changes detected"; \
+			echo "   Consider committing before deployment"; \
+		else \
+			echo "✅ No uncommitted changes"; \
+		fi; \
+	fi
+	@echo ""
+	@# Show current status
+	@$(MAKE) status
+	@echo ""
+	@echo "✅ Validation complete!"
+
+update:
+	@echo "📥 Pulling latest changes from git..."
+	@echo ""
+	@if [ ! -d .git ]; then \
+		echo "❌ Not a git repository"; \
+		exit 1; \
+	fi
+	@# Fetch and show status before pull
+	@git fetch origin
+	@echo "Changes to be pulled:"
+	@git log HEAD..origin/$$(git rev-parse --abbrev-ref HEAD) --oneline 2>/dev/null || echo "Already up to date"
+	@echo ""
+	@# Pull changes
+	@git pull
+	@echo ""
+	@echo "📋 Changed files:"
+	@git diff --name-only HEAD@{1} HEAD 2>/dev/null || echo "No changes"
+	@echo ""
+	@echo "✅ Update complete!"
+	@echo ""
+	@echo "💡 Next steps:"
+	@echo "  Development: make redeploy-dev"
+	@echo "  Production:  make validate && make redeploy-prod"
+
+# =========================
 # DEVELOPMENT
 # =========================
 build-dev:
@@ -38,6 +129,30 @@ down-dev:
 	$(COMPOSE_DEV) down
 
 restart-dev: down-dev up-dev
+
+redeploy-dev:
+	@echo "🔄 Redeploying development environment..."
+	@echo ""
+	@# Stop existing container
+	@echo "⏹️  Stopping existing container..."
+	@$(COMPOSE_DEV) down 2>/dev/null || true
+	@# Rebuild with latest code
+	@echo "🔨 Building with latest code..."
+	@$(COMPOSE_DEV) build app
+	@# Start new container
+	@echo "🚀 Starting new container..."
+	@$(COMPOSE_DEV) up -d app
+	@# Wait a moment for startup
+	@sleep 3
+	@# Show status
+	@echo ""
+	@echo "✅ Development redeployment complete!"
+	@echo ""
+	@$(MAKE) status
+	@echo ""
+	@echo "📋 Viewing logs (Ctrl+C to exit):"
+	@echo ""
+	@docker logs -f --tail=50 $(APP_DEV)
 
 dev: build-dev up-dev
 	@echo "Development environment started. Check with 'make logs-dev'"
@@ -55,6 +170,44 @@ down-prod:
 	$(COMPOSE_PROD) down
 
 restart-prod: down-prod up-prod
+
+redeploy-prod:
+	@echo "🚀 Redeploying production environment..."
+	@echo ""
+	@# Pre-deployment validation
+	@echo "🔍 Step 1/5: Validation"
+	@$(MAKE) validate
+	@echo ""
+	@# Build new image
+	@echo "🔨 Step 2/5: Building new image..."
+	@$(COMPOSE_PROD_NET) build app
+	@echo ""
+	@# Create temp container name
+	@NEW_CONTAINER=$(APP_PROD)_new_$$(date +%s); \
+	OLD_CONTAINER=$(APP_PROD); \
+	echo "📦 Step 3/5: Starting new container ($$NEW_CONTAINER)..."; \
+	$(COMPOSE_PROD_NET) up -d app && \
+	sleep 5 && \
+	echo ""; \
+	echo "🏥 Step 4/5: Health checking new container..."; \
+	if docker exec $(APP_PROD) curl -f http://localhost:8080/health >/dev/null 2>&1; then \
+		echo "✅ New container is healthy"; \
+		echo ""; \
+		echo "🔄 Step 5/5: Deployment complete!"; \
+	else \
+		echo "❌ Health check failed!"; \
+		echo "Rolling back..."; \
+		$(COMPOSE_PROD_NET) down; \
+		exit 1; \
+	fi
+	@echo ""
+	@echo "✅ Production redeployment successful!"
+	@echo ""
+	@$(MAKE) status
+	@echo ""
+	@echo "📋 Viewing logs (Ctrl+C to exit):"
+	@echo ""
+	@docker logs -f --tail=50 $(APP_PROD)
 
 prod: build-prod up-prod
 	@echo "Production environment started. Check with 'make logs'"
