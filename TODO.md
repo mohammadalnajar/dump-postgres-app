@@ -1,7 +1,25 @@
 # 📋 TODO & Next Steps
 
-> **Last Updated:** September 24, 2024
+> **Last Updated:** January 24, 2026
 > **Status:** Active Development
+
+## ✅ **Recently Completed**
+
+### Core Features
+- [x] **FEAT-001**: Backup scheduling functionality (cron jobs with encryption)
+- [x] **FEAT-005**: Secure credential storage with AES-256-GCM encryption
+- [x] **NICE-001**: Dark mode support for UI
+
+### Security & Authentication
+- [x] **AUTH-000**: Session-based authentication implemented
+- [x] **SEC-002**: Secure credential storage with encryption
+
+### Infrastructure
+- [x] **INFRA-002**: Health check endpoints for monitoring
+- [x] Navicat-style formatting support
+- [x] Cron job sleep/wake detection for laptops
+- [x] Intelligent backup cleanup system
+- [x] Confirmation modal system for UI
 
 ## 🔥 **High Priority**
 
@@ -13,11 +31,9 @@
 - [ ] **SEC-002**: Implement secure credential storage (consider HashiCorp Vault integration)
 
 ### Core Features
-- [ ] **FEAT-001**: Add backup scheduling functionality (extend cron jobs)
 - [ ] **FEAT-002**: Implement backup verification (test restore functionality)
 - [ ] **FEAT-003**: Add progress indicators for long-running backup operations
 - [ ] **FEAT-004**: Support for multiple database types (MySQL, MongoDB)
-- [ ] **FEAT-005**: Implement saving db credentials securely for repeated use
 - [ ] **FEAT-006**: Implement running queries on multiple databases in one go
 
 ## 🟡 **Medium Priority**
@@ -32,8 +48,7 @@
 - [ ] **INFRA-001**: Set up automated testing pipeline
 - [ ] **INFRA-002**: Implement health check endpoints for monitoring
 - [ ] **INFRA-003**: Add Prometheus metrics collection
-- [ ] **INFRA-004**: Create Kubernetes deployment manifests
-
+- [ ] **INFRA-00
 ## 🟢 **Low Priority**
 
 ### Documentation
@@ -44,10 +59,9 @@
 
 ### Nice-to-Have
 - [ ] **NICE-001**: Dark mode support for UI
-- [ ] **NICE-002**: Backup compression options
-- [ ] **NICE-003**: Integration with cloud storage providers (AWS S3, Google Cloud)
-- [ ] **NICE-004**: Real-time backup monitoring dashboard
-
+- [ ] **NICE-002**: Advanced backup compression options
+- [ ] **NICE-003**: Integration with cloud storage providers (AWS S3, Azure Blob, Google Cloud)
+- [ ] **NICE-004**: Real-time backup monitoring dashboard with WebSockets
 ## 🐛 **Known Issues**
 
 - [ ] **BUG-001**: Large database timeouts need better handling
@@ -58,19 +72,35 @@
 
 - [x] **FEAT-000**: Basic PostgreSQL dump functionality
 - [x] **AUTH-000**: Session-based authentication
-- [x] **FEAT-000**: Navicat-style formatting support
+### Features
+- [x] **FEAT-000**: Basic PostgreSQL dump functionality
+- [x] **FEAT-001**: Backup scheduling with encrypted cron jobs
+- [x] **FEAT-005**: Secure credential storage with AES-256-GCM
+
+### Security & Auth
+- [x] **AUTH-000**: Session-based authentication
+- [x] **SEC-002**: Encrypted credential storage
+
+### Infrastructure & UX
+- [x] **INFRA-002**: Health check endpoints
+- [x] **NICE-001**: Dark mode UI support
+- [x] Navicat-style formatting
+- [x] Sleep/wake detection for cron jobs
+- [x] Backup cleanup system
+- [x] Confirmation modal system
 
 ## 📝 **Development Notes**
 
 ### Current Focus
-Working on improving backup reliability and user experience.
+Improving backup reliability, performance monitoring, and cloud integration.
 
 ### Technical Debt
-- Refactor pgdump.js for better error handling
-- Consolidate authentication methods
-- Improve test coverage
+- Implement automated testing suite
+- Add API documentation
+- Improve error handling for edge cases
 
 ### Ideas for Future
 - Plugin system for custom formatters
-- Multi-tenant support
-- Backup scheduling with cron expressions
+- Multi-tenant support with user management
+- Backup diff/comparison tools
+- Restore preview functionality

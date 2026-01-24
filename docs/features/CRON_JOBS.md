@@ -133,7 +133,57 @@ Scheduled backups are saved in the same `backups/` directory as manual backups, 
 ✅ **Flexible**: Supports all cron pattern syntax  
 ✅ **User-friendly**: Intuitive web interface  
 
+## Advanced Features
+
+### Sleep/Wake Detection (Laptop Users)
+The cron system includes intelligent sleep/wake cycle detection for development on laptops:
+
+**What it does:**
+- Monitors for time gaps > 90 seconds between checks
+- Detects when your system was likely asleep
+- Provides clear context in logs (🛌💤 icons)
+- Distinguishes between performance issues and normal sleep behavior
+
+**Expected Behavior:**
+- **Before Sleep**: Normal cron execution
+- **After Wake**: System detects the sleep period and logs it
+- **Missed Jobs**: Any missed executions are logged with sleep context
+- **Automatic Recovery**: Jobs continue normal scheduling after wake
+
+**Log Examples:**
+```
+🛌 System sleep detected - 3600s gap since last check
+📢 Any missed cron executions during this time are due to system sleep, not performance issues
+🔄 Executing scheduled backup job: production-db
+```
+
+This is **normal behavior** for laptop-based development and requires no action.
+
+### Concurrency Protection
+- Running jobs are tracked to prevent duplicate executions
+- If a job is still running when the next execution time arrives, it will be skipped
+- Jobs maintain their own execution state
+
+### Performance Monitoring
+- Automatic health status logging every hour
+- Job execution times are tracked
+- Status tracking includes: last run time, last result, enabled/disabled state
+
 ## Monitoring and Troubleshooting
+
+### Health Check Script
+Use the provided health check script to monitor your cron jobs:
+
+```bash
+node scripts/check-cron-health.js
+```
+
+This will show:
+- Total jobs count
+- Enabled vs active jobs
+- Currently running jobs
+- Individual job status and last execution
+- Health warnings for potential issues
 
 ### Checking Job Status
 - View the "Scheduled Backup Jobs" table for job status

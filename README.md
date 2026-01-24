@@ -327,10 +327,9 @@ dump-postgres-app/
 │  ├─ lib/
 │  │  ├─ pgdump.js            # PostgreSQL backup execution
 │  │  ├─ navicat-formatter.js # Navicat-style output formatting
-│  │  ├─ cronManagerSecure.js # Advanced cron system with encryption
-│  │  ├─ cronManager.js       # Legacy cron system (fallback)
+│  │  ├─ cronManagerSecure.js # Encrypted cron system with sleep/wake detection
 │  │  ├─ backupCleanup.js     # Intelligent backup cleanup
-│  │  ├─ auth.js              # Authentication middleware
+│  │  ├─ auth.js              # Session-based authentication
 │  │  ├─ sanitize.js          # Input sanitization utilities
 │  │  └─ validate.js          # Input validation helpers
 │  └─ public/
@@ -339,15 +338,21 @@ dump-postgres-app/
 │     └─ confirmation-modal.js  # Modal system logic
 ├─ backups/                   # Generated dumps (Docker volume)
 ├─ scripts/
-│  ├─ backup.sh               # CLI wrapper (inside container)
+│  ├─ backup.sh               # CLI backup wrapper
+│  ├─ check-cron-health.js    # Cron job health monitoring
 │  ├─ scan-todos.sh           # TODO scanning automation
 │  ├─ setup-hooks.sh          # Git hooks installation
 │  └─ test-hooks.sh           # Hook testing utilities
+├─ test/
+│  ├─ debug-pgdump.js         # Database connection testing
+│  ├─ test-auth.js            # Authentication testing
+│  └─ test-json-escaping.js   # JSON sanitization tests
 ├─ docs/                      # Comprehensive documentation
-│  ├─ AUTHENTICATION.md       # Auth system documentation
-│  ├─ BACKUP_CLEANUP.md       # Cleanup system guide
-│  ├─ CONFIRMATION_MODAL_SYSTEM.md # Modal system docs
-│  ├─ CRON_JOBS.md            # Cron system documentation
+│  ├─ README.md               # Documentation index
+│  ├─ deployment/             # Production deployment guides
+│  ├─ features/               # Feature documentation
+│  ├─ development/            # Developer guides
+│  └─ archive/                # Historical implementation notes
 │  ├─ ENCRYPTION-COMPLETE.md  # Encryption implementation
 │  ├─ GIT_HOOKS_GUIDE.md      # Git hooks setup guide
 │  ├─ TODO_SYSTEM_GUIDE.md    # Task management docs
